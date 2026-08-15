@@ -31,8 +31,8 @@ import kotlin.math.min
  */
 object WidgetRenderer {
 
-    private const val FALLBACK_SIZE_DP = 140
-    private const val MAX_BITMAP_SIDE_PX = 420
+    private const val FALLBACK_SIZE_DP = 144
+    private const val MAX_BITMAP_SIDE_PX = 440
 
     fun updateDateAll(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
@@ -84,9 +84,9 @@ object WidgetRenderer {
     private fun widgetSizeDp(manager: AppWidgetManager, id: Int): Pair<Int, Int> {
         val options = manager.getAppWidgetOptions(id)
         val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, FALLBACK_SIZE_DP)
-            .coerceIn(90, 260)
+            .coerceIn(90, 270)
         val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, FALLBACK_SIZE_DP)
-            .coerceIn(90, 260)
+            .coerceIn(90, 270)
         return width to height
     }
 
@@ -109,7 +109,9 @@ object WidgetRenderer {
         canvas.drawColor(Color.TRANSPARENT)
 
         val hostSide = min(widthPx, heightPx).toFloat()
-        val outerInset = 2.5f * scale
+        // Keep only a hairline transparent safety margin. This makes the visible card
+        // about 3–4% larger than v1.2.1 while preserving fully rounded transparent corners.
+        val outerInset = 0.65f * scale
         val side = (hostSide - outerInset * 2f).coerceAtLeast(1f)
         val left = (widthPx - side) / 2f
         val top = (heightPx - side) / 2f
@@ -118,8 +120,10 @@ object WidgetRenderer {
         val cardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             style = Paint.Style.FILL
+            isDither = true
         }
-        val radius = side * 0.185f
+        // iOS medium widgets use a generous continuous-looking corner radius.
+        val radius = side * 0.195f
         canvas.drawRoundRect(card, radius, radius, cardPaint)
 
         return Surface(bitmap, canvas, scale, card, side)
@@ -166,7 +170,7 @@ object WidgetRenderer {
 
         val weekday = textPaint(
             Color.rgb(5, 5, 5),
-            s.side * 0.102f,
+            s.side * 0.106f,
             regular,
             Paint.Align.CENTER
         )
@@ -174,18 +178,18 @@ object WidgetRenderer {
             s.canvas,
             date.dayOfWeek,
             centerX,
-            s.card.top + s.side * 0.255f,
+            s.card.top + s.side * 0.252f,
             weekday
         )
 
         val number = PersianNumbers.digits(date.day)
         val numberPaint = textPaint(
             Color.BLACK,
-            s.side * 0.305f,
+            s.side * 0.322f,
             bold,
             Paint.Align.CENTER
         )
-        fitText(numberPaint, number, s.side * 0.62f, s.side * 0.23f)
+        fitText(numberPaint, number, s.side * 0.64f, s.side * 0.24f)
         drawCenteredText(
             s.canvas,
             number,
@@ -197,16 +201,16 @@ object WidgetRenderer {
         val fullDate = "${date.monthName} ${PersianNumbers.digits(date.year)}"
         val fullDatePaint = textPaint(
             Color.rgb(5, 5, 5),
-            s.side * 0.102f,
+            s.side * 0.106f,
             regular,
             Paint.Align.CENTER
         )
-        fitText(fullDatePaint, fullDate, s.side * 0.82f, s.side * 0.075f)
+        fitText(fullDatePaint, fullDate, s.side * 0.84f, s.side * 0.078f)
         drawCenteredText(
             s.canvas,
             fullDate,
             centerX,
-            s.card.top + s.side * 0.785f,
+            s.card.top + s.side * 0.792f,
             fullDatePaint
         )
 
@@ -217,20 +221,20 @@ object WidgetRenderer {
         val s = surface(widthDp, heightDp)
         val regular = regularTypeface(context)
         val bold = boldTypeface(context)
-        val left = s.card.left + s.side * 0.105f
-        val right = s.card.right - s.side * 0.105f
+        val left = s.card.left + s.side * 0.103f
+        val right = s.card.right - s.side * 0.103f
 
         drawFlag(
             context,
             s.canvas,
-            s.card.left + s.side * 0.105f,
-            s.card.top + s.side * 0.105f,
-            s.side * 0.195f
+            s.card.left + s.side * 0.103f,
+            s.card.top + s.side * 0.103f,
+            s.side * 0.205f
         )
 
         val title = textPaint(
             Color.rgb(5, 5, 5),
-            s.side * 0.086f,
+            s.side * 0.089f,
             regular,
             Paint.Align.RIGHT
         )
@@ -238,13 +242,13 @@ object WidgetRenderer {
             s.canvas,
             "دلار آمریکا",
             right,
-            s.card.top + s.side * 0.165f,
+            s.card.top + s.side * 0.162f,
             title
         )
 
         val code = textPaint(
             Color.rgb(136, 136, 141),
-            s.side * 0.066f,
+            s.side * 0.068f,
             Typeface.create("sans-serif", Typeface.NORMAL),
             Paint.Align.RIGHT
         )
@@ -252,7 +256,7 @@ object WidgetRenderer {
             s.canvas,
             "USD",
             right,
-            s.card.top + s.side * 0.245f,
+            s.card.top + s.side * 0.244f,
             code
         )
 
@@ -271,32 +275,32 @@ object WidgetRenderer {
         }
         val deltaPaint = textPaint(
             deltaColor,
-            s.side * if (rate == null) 0.071f else 0.078f,
+            s.side * if (rate == null) 0.073f else 0.080f,
             regular,
             Paint.Align.LEFT
         )
-        fitText(deltaPaint, deltaText, s.side * 0.78f, s.side * 0.055f)
+        fitText(deltaPaint, deltaText, s.side * 0.79f, s.side * 0.056f)
         drawCenteredText(
             s.canvas,
             deltaText,
             left,
-            s.card.top + s.side * 0.605f,
+            s.card.top + s.side * 0.602f,
             deltaPaint
         )
 
         val price = rate?.let { PersianNumbers.grouped(it.priceToman) } ?: "—"
         val pricePaint = textPaint(
             Color.BLACK,
-            s.side * 0.245f,
+            s.side * 0.255f,
             bold,
             Paint.Align.LEFT
         )
-        fitText(pricePaint, price, s.side * 0.80f, s.side * 0.17f)
+        fitText(pricePaint, price, s.side * 0.81f, s.side * 0.175f)
         drawCenteredText(
             s.canvas,
             price,
             left,
-            s.card.top + s.side * 0.785f,
+            s.card.top + s.side * 0.790f,
             pricePaint
         )
 
