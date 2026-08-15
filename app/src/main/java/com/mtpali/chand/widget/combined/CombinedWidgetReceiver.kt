@@ -5,7 +5,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import com.mtpali.chand.widget.WidgetRenderer
 import com.mtpali.chand.work.PriceUpdateScheduler
 
 class CombinedWidgetReceiver : AppWidgetProvider() {
@@ -21,7 +20,7 @@ class CombinedWidgetReceiver : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        WidgetRenderer.updateCombined(context, appWidgetManager, appWidgetIds)
+        CombinedWidgetRenderer.update(context, appWidgetManager, appWidgetIds)
         PriceUpdateScheduler.schedule(context)
     }
 
@@ -32,13 +31,13 @@ class CombinedWidgetReceiver : AppWidgetProvider() {
         newOptions: Bundle
     ) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
-        WidgetRenderer.updateCombined(context, appWidgetManager, appWidgetId, newOptions)
+        CombinedWidgetRenderer.update(context, appWidgetManager, appWidgetId, newOptions)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_REFRESH) {
-            WidgetRenderer.updateCombinedAll(context)
+            CombinedWidgetRenderer.updateAll(context)
             PriceUpdateScheduler.enqueueNow(context)
         }
     }
