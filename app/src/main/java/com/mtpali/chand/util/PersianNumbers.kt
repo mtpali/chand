@@ -4,7 +4,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 object PersianNumbers {
-    private val formatter = NumberFormat.getIntegerInstance(Locale("fa", "IR"))
+    private val formatter = NumberFormat.getIntegerInstance(Locale.forLanguageTag("fa-IR"))
 
     fun digits(value: Int): String = value.toString().toPersianDigits()
     fun digits(value: Long): String = value.toString().toPersianDigits()
