@@ -11,7 +11,7 @@ class AlanChandClient {
         val html = request(PUBLIC_USD_PAGE)
         val rial = AlanChandParser.publicHtmlUsdSellRial(html)
             ?: error("USD row was not found on AlanChand public page")
-        return FetchedRate(rial / 10L, "AlanChand Web")
+        return FetchedRate(AlanChandParser.normalizeToToman(rial), "AlanChand Web")
     }
 
     private fun request(url: String): String {
