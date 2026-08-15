@@ -1,5 +1,5 @@
-# Keep only the JNI bridge name/method required by the native vault.
--keep,allowoptimization class com.mtpali.chand.promo.Bx {
+# Keep only the neutral JNI bridge required for dynamic native registration.
+-keep,allowoptimization class com.mtpali.chand.k.Q {
     native <methods>;
 }
 
