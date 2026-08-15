@@ -5,4 +5,6 @@
     <string name="date_widget_description">نمایش مینیمال روز، ماه و سال شمسی</string>
     <string name="dollar_widget_name">قیمت دلار</string>
     <string name="dollar_widget_description">نمایش قیمت به‌روز دلار آمریکا در بازار ایران</string>
+    <string name="combined_widget_name">تاریخ و دلار - iOS</string>
+    <string name="combined_widget_description">دو کارت تاریخ و دلار هم‌اندازه و منظم در یک ردیف</string>
 </resources>
