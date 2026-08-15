@@ -17,7 +17,9 @@ import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.appWidgetBackground
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -60,7 +62,7 @@ class DollarWidget : GlanceAppWidget() {
 private fun DollarContent(rate: DollarRate?) {
     val available = LocalSize.current
     val shortestSide = minOf(available.width, available.height)
-    val cardSide = if (shortestSide > 84.dp) shortestSide - 4.dp else shortestSide
+    val cardSide = if (shortestSide > 84.dp) shortestSide - 2.dp else shortestSide
     val compact = cardSide < 108.dp
 
     Box(
@@ -70,10 +72,14 @@ private fun DollarContent(rate: DollarRate?) {
         Box(
             modifier = GlanceModifier
                 .size(cardSide)
+                .background(GlanceTheme.colors.widgetBackground)
+                .cornerRadius(30.dp)
                 .appWidgetBackground()
                 .clickable(actionRunCallback<RefreshDollarAction>()),
             contentAlignment = Alignment.Center
         ) {
+            // Drawable fallback preserves the rounded white card on launchers that
+            // do not fully support runtime Glance corner clipping.
             Image(
                 provider = ImageProvider(R.drawable.widget_card_white),
                 contentDescription = null,
@@ -98,14 +104,14 @@ private fun CompactDollar(rate: DollarRate?) {
         Image(
             provider = ImageProvider(R.drawable.us_flag_round),
             contentDescription = "US Dollar",
-            modifier = GlanceModifier.size(31.dp)
+            modifier = GlanceModifier.size(32.dp)
         )
-        Spacer(GlanceModifier.height(6.dp))
+        Spacer(GlanceModifier.height(7.dp))
         Text(
             rate?.let { PersianNumbers.grouped(it.priceToman) } ?: "—",
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
-                fontSize = 21.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.SansSerif,
                 textAlign = TextAlign.Center
@@ -118,8 +124,8 @@ private fun CompactDollar(rate: DollarRate?) {
 private fun FullDollar(rate: DollarRate?) {
     val delta = rate?.deltaToman ?: 0L
     val deltaText = when {
-        delta > 0 -> "↑ ${PersianNumbers.grouped(delta)}"
-        delta < 0 -> "↓ ${PersianNumbers.grouped(-delta)}"
+        delta > 0 -> "↑${PersianNumbers.grouped(delta)}"
+        delta < 0 -> "↓${PersianNumbers.grouped(-delta)}"
         rate != null -> "بدون تغییر"
         else -> "در حال بروزرسانی"
     }
@@ -132,7 +138,7 @@ private fun FullDollar(rate: DollarRate?) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .padding(13.dp),
+            .padding(14.dp),
         horizontalAlignment = Alignment.Start,
         verticalAlignment = Alignment.Top
     ) {
@@ -143,7 +149,7 @@ private fun FullDollar(rate: DollarRate?) {
             Image(
                 provider = ImageProvider(R.drawable.us_flag_round),
                 contentDescription = "US Dollar",
-                modifier = GlanceModifier.size(32.dp)
+                modifier = GlanceModifier.size(34.dp)
             )
 
             Column(
@@ -155,7 +161,7 @@ private fun FullDollar(rate: DollarRate?) {
                     modifier = GlanceModifier.fillMaxWidth(),
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurface,
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         fontFamily = FontFamily.SansSerif,
                         textAlign = TextAlign.Right
@@ -166,7 +172,7 @@ private fun FullDollar(rate: DollarRate?) {
                     modifier = GlanceModifier.fillMaxWidth(),
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         fontFamily = FontFamily.SansSerif,
                         textAlign = TextAlign.Right
@@ -175,14 +181,14 @@ private fun FullDollar(rate: DollarRate?) {
             }
         }
 
-        Spacer(GlanceModifier.height(9.dp))
+        Spacer(GlanceModifier.height(10.dp))
 
         Text(
             deltaText,
             modifier = GlanceModifier.fillMaxWidth(),
             style = TextStyle(
                 color = deltaColor,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 fontFamily = FontFamily.SansSerif,
                 textAlign = TextAlign.Left
@@ -196,7 +202,7 @@ private fun FullDollar(rate: DollarRate?) {
             modifier = GlanceModifier.fillMaxWidth(),
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
-                fontSize = 30.sp,
+                fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.SansSerif,
                 textAlign = TextAlign.Left
