@@ -39,11 +39,12 @@ class AppPreferences(context: Context) {
     fun saveDollarRate(priceToman: Long, source: String, nowMillis: Long = System.currentTimeMillis()): DollarRate {
         require(priceToman > 0L)
         val old = cachedDollarRate()
-        val previous = when {
-            old == null -> priceToman
-            old.priceToman != priceToman -> old.priceToman
-            else -> old.previousToman
-        }
+
+        // Always compare a fresh quote with the immediately previous successful quote.
+        // This makes the widget behave like Chand on iOS:
+        // higher = red up arrow, lower = green down arrow, equal = no change.
+        val previous = old?.priceToman ?: priceToman
+
         prefs.edit()
             .putLong(KEY_RATE_CURRENT, priceToman)
             .putLong(KEY_RATE_PREVIOUS, previous)
