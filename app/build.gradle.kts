@@ -5,10 +5,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-val alanChandToken = providers.gradleProperty("ALANCHAND_TOKEN").orNull ?: ""
-
-// Fonts are pinned to a specific upstream release and downloaded at build time.
-// The installed APK contains the fonts and does not need internet for typography.
+// Fonts are pinned to a specific upstream release and downloaded only at build time.
+// The installed APK is fully self-contained for typography.
 val widgetFontDir = layout.projectDirectory.dir("src/main/res/font")
 val downloadWidgetFonts by tasks.registering {
     val regular = widgetFontDir.file("vazirmatn_regular.ttf")
@@ -38,16 +36,18 @@ tasks.matching { it.name == "preBuild" }.configureEach {
 android {
     namespace = "com.mtpali.chand"
     compileSdk = 36
+    ndkVersion = "27.2.12479018"
 
     defaultConfig {
         applicationId = "com.mtpali.chand"
         minSdk = 26
         targetSdk = 36
-        versionCode = 20
-        versionName = "1.5.7"
+        versionCode = 21
+        versionName = "1.6.0"
 
-        buildConfigField("String", "ALANCHAND_TOKEN", "\"$alanChandToken\"")
-        buildConfigField("String", "ALANCHAND_API_URL", "\"https://api.alanchand.com\"")
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
     }
 
     buildFeatures {
@@ -55,13 +55,34 @@ android {
         buildConfig = true
     }
 
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            isDebuggable = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+
+        // Installable CI artifact with the same R8/resource hardening as release.
+        // For public distribution, replace the debug signing config with a private persistent
+        // release key stored only in GitHub Secrets / Play App Signing.
+        create("hardened") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            isDebuggable = false
+            matchingFallbacks += listOf("release")
         }
     }
 
@@ -72,6 +93,7 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        jniLibs.useLegacyPackaging = false
     }
 }
 
