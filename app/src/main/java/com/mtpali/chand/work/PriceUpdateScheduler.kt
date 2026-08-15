@@ -11,42 +11,48 @@ import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
 object PriceUpdateScheduler {
-    private const val PERIODIC_NAME = "chand-dollar-periodic"
+    // Use a new unique name for the one-hour generation. This avoids mutating the old
+    // 15-minute PeriodicWorkRequest in place on vendor WorkManager implementations.
+    private const val LEGACY_PERIODIC_NAME = "chand-dollar-periodic"
+    private const val HOURLY_PERIODIC_NAME = "chand-dollar-hourly-v1"
     private const val IMMEDIATE_NAME = "chand-dollar-immediate"
 
     fun schedule(context: Context) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        runCatching {
+            val manager = WorkManager.getInstance(context.applicationContext)
+            manager.cancelUniqueWork(LEGACY_PERIODIC_NAME)
 
-        val request = PeriodicWorkRequestBuilder<PriceUpdateWorker>(1, TimeUnit.HOURS)
-            .setConstraints(constraints)
-            .build()
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
 
-        // UPDATE is important for users upgrading from older builds that used a
-        // 15-minute interval; it replaces the persisted schedule with one hour.
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            PERIODIC_NAME,
-            ExistingPeriodicWorkPolicy.UPDATE,
-            request
-        )
+            val request = PeriodicWorkRequestBuilder<PriceUpdateWorker>(1, TimeUnit.HOURS)
+                .setConstraints(constraints)
+                .build()
+
+            manager.enqueueUniquePeriodicWork(
+                HOURLY_PERIODIC_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,
+                request
+            )
+        }
     }
 
     fun enqueueNow(context: Context) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        runCatching {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
 
-        val request = OneTimeWorkRequestBuilder<PriceUpdateWorker>()
-            .setConstraints(constraints)
-            .build()
+            val request = OneTimeWorkRequestBuilder<PriceUpdateWorker>()
+                .setConstraints(constraints)
+                .build()
 
-        // Opening the app can happen repeatedly in a short time. Keep only one
-        // immediate refresh in the queue to avoid duplicate network requests.
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            IMMEDIATE_NAME,
-            ExistingWorkPolicy.REPLACE,
-            request
-        )
+            WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
+                IMMEDIATE_NAME,
+                ExistingWorkPolicy.REPLACE,
+                request
+            )
+        }
     }
 }
