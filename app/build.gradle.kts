@@ -5,6 +5,36 @@ plugins {
 
 val alanChandToken = providers.gradleProperty("ALANCHAND_TOKEN").orNull ?: ""
 
+// Widgets are rendered with classic RemoteViews instead of Glance. This gives us
+// predictable rounded corners on launchers such as MIUI and allows an embedded
+// Persian typeface. The font is pinned to a specific upstream release and is
+// downloaded only at build time; the installed app works fully offline for fonts.
+val widgetFontDir = layout.projectDirectory.dir("src/main/res/font")
+val downloadWidgetFonts by tasks.registering {
+    val regular = widgetFontDir.file("vazirmatn_regular.ttf")
+    val bold = widgetFontDir.file("vazirmatn_bold.ttf")
+    outputs.files(regular, bold)
+
+    doLast {
+        widgetFontDir.asFile.mkdirs()
+        val files = mapOf(
+            regular.asFile to "https://raw.githubusercontent.com/rastikerdar/vazirmatn/v33.003/fonts/ttf/Vazirmatn-Regular.ttf",
+            bold.asFile to "https://raw.githubusercontent.com/rastikerdar/vazirmatn/v33.003/fonts/ttf/Vazirmatn-Bold.ttf"
+        )
+        files.forEach { (target, source) ->
+            if (!target.exists() || target.length() < 100_000L) {
+                java.net.URI(source).toURL().openStream().use { input ->
+                    target.outputStream().use { output -> input.copyTo(output) }
+                }
+            }
+        }
+    }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(downloadWidgetFonts)
+}
+
 android {
     namespace = "com.mtpali.chand"
     compileSdk = 36
@@ -13,8 +43,8 @@ android {
         applicationId = "com.mtpali.chand"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
 
         buildConfigField("String", "ALANCHAND_TOKEN", "\"$alanChandToken\"")
         buildConfigField("String", "ALANCHAND_API_URL", "\"https://api.alanchand.com\"")
@@ -54,8 +84,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    implementation("androidx.glance:glance-appwidget:1.1.1")
-    implementation("androidx.glance:glance-material3:1.1.1")
     implementation("androidx.work:work-runtime:2.11.2")
 
     testImplementation("junit:junit:4.13.2")
