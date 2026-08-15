@@ -43,8 +43,8 @@ android {
         applicationId = "com.mtpali.chand"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.2.1"
+        versionCode = 5
+        versionName = "1.2.2"
 
         buildConfigField("String", "ALANCHAND_TOKEN", "\"$alanChandToken\"")
         buildConfigField("String", "ALANCHAND_API_URL", "\"https://api.alanchand.com\"")
