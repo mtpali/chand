@@ -7,10 +7,8 @@ plugins {
 
 val alanChandToken = providers.gradleProperty("ALANCHAND_TOKEN").orNull ?: ""
 
-// Widgets are rendered with classic RemoteViews instead of Glance. This gives us
-// predictable rounded corners on launchers such as MIUI and allows an embedded
-// Persian typeface. The font is pinned to a specific upstream release and is
-// downloaded only at build time; the installed app works fully offline for fonts.
+// Fonts are pinned to a specific upstream release and downloaded at build time.
+// The installed APK contains the fonts and does not need internet for typography.
 val widgetFontDir = layout.projectDirectory.dir("src/main/res/font")
 val downloadWidgetFonts by tasks.registering {
     val regular = widgetFontDir.file("vazirmatn_regular.ttf")
@@ -45,8 +43,8 @@ android {
         applicationId = "com.mtpali.chand"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.2.0"
+        versionCode = 4
+        versionName = "1.2.1"
 
         buildConfigField("String", "ALANCHAND_TOKEN", "\"$alanChandToken\"")
         buildConfigField("String", "ALANCHAND_API_URL", "\"https://api.alanchand.com\"")
