@@ -2,7 +2,6 @@ package com.mtpali.chand.widget.dollar
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -18,12 +17,11 @@ import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.appWidgetBackground
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
-import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -31,6 +29,7 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
+import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
@@ -43,9 +42,7 @@ import com.mtpali.chand.widget.WidgetPalette
 import com.mtpali.chand.work.PriceUpdateScheduler
 
 class DollarWidget : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Responsive(
-        setOf(DpSize(110.dp, 110.dp), DpSize(180.dp, 180.dp))
-    )
+    override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val preferences = AppPreferences(context)
@@ -61,40 +58,56 @@ class DollarWidget : GlanceAppWidget() {
 
 @Composable
 private fun DollarContent(rate: DollarRate?) {
-    val compact = LocalSize.current.width < 150.dp || LocalSize.current.height < 150.dp
+    val available = LocalSize.current
+    val shortestSide = minOf(available.width, available.height)
+    val cardSide = if (shortestSide > 84.dp) shortestSide - 4.dp else shortestSide
+    val compact = cardSide < 108.dp
+
     Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(GlanceTheme.colors.widgetBackground)
-            .cornerRadius(R.dimen.widget_corner_radius)
-            .appWidgetBackground()
-            .clickable(actionRunCallback<RefreshDollarAction>())
-            .padding(if (compact) 10.dp else 16.dp),
+        modifier = GlanceModifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        if (compact) CompactDollar(rate) else FullDollar(rate)
+        Box(
+            modifier = GlanceModifier
+                .size(cardSide)
+                .appWidgetBackground()
+                .clickable(actionRunCallback<RefreshDollarAction>()),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                provider = ImageProvider(R.drawable.widget_card_white),
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = GlanceModifier.fillMaxSize()
+            )
+
+            if (compact) CompactDollar(rate) else FullDollar(rate)
+        }
     }
 }
 
 @Composable
 private fun CompactDollar(rate: DollarRate?) {
     Column(
-        modifier = GlanceModifier.fillMaxSize(),
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
             provider = ImageProvider(R.drawable.us_flag_round),
             contentDescription = "US Dollar",
-            modifier = GlanceModifier.size(34.dp)
+            modifier = GlanceModifier.size(31.dp)
         )
-        Spacer(GlanceModifier.height(7.dp))
+        Spacer(GlanceModifier.height(6.dp))
         Text(
             rate?.let { PersianNumbers.grouped(it.priceToman) } ?: "—",
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
-                fontSize = 23.sp,
+                fontSize = 21.sp,
                 fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.SansSerif,
                 textAlign = TextAlign.Center
             )
         )
@@ -108,7 +121,7 @@ private fun FullDollar(rate: DollarRate?) {
         delta > 0 -> "↑ ${PersianNumbers.grouped(delta)}"
         delta < 0 -> "↓ ${PersianNumbers.grouped(-delta)}"
         rate != null -> "بدون تغییر"
-        else -> "لمس برای بروزرسانی"
+        else -> "در حال بروزرسانی"
     }
     val deltaColor = when {
         delta > 0 -> GlanceTheme.colors.error
@@ -117,8 +130,10 @@ private fun FullDollar(rate: DollarRate?) {
     }
 
     Column(
-        modifier = GlanceModifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .padding(13.dp),
+        horizontalAlignment = Alignment.Start,
         verticalAlignment = Alignment.Top
     ) {
         Row(
@@ -128,8 +143,9 @@ private fun FullDollar(rate: DollarRate?) {
             Image(
                 provider = ImageProvider(R.drawable.us_flag_round),
                 contentDescription = "US Dollar",
-                modifier = GlanceModifier.size(42.dp)
+                modifier = GlanceModifier.size(32.dp)
             )
+
             Column(
                 modifier = GlanceModifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.End
@@ -139,8 +155,9 @@ private fun FullDollar(rate: DollarRate?) {
                     modifier = GlanceModifier.fillMaxWidth(),
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurface,
-                        fontSize = 15.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
+                        fontFamily = FontFamily.SansSerif,
                         textAlign = TextAlign.Right
                     )
                 )
@@ -149,33 +166,40 @@ private fun FullDollar(rate: DollarRate?) {
                     modifier = GlanceModifier.fillMaxWidth(),
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = 12.sp,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = FontFamily.SansSerif,
                         textAlign = TextAlign.Right
                     )
                 )
             }
         }
 
-        Spacer(GlanceModifier.height(12.dp))
+        Spacer(GlanceModifier.height(9.dp))
+
         Text(
             deltaText,
             modifier = GlanceModifier.fillMaxWidth(),
             style = TextStyle(
                 color = deltaColor,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
+                fontFamily = FontFamily.SansSerif,
                 textAlign = TextAlign.Left
             )
         )
-        Spacer(GlanceModifier.height(2.dp))
+
+        Spacer(GlanceModifier.height(1.dp))
+
         Text(
             rate?.let { PersianNumbers.grouped(it.priceToman) } ?: "—",
             modifier = GlanceModifier.fillMaxWidth(),
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
-                fontSize = 34.sp,
+                fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                fontFamily = FontFamily.SansSerif,
+                textAlign = TextAlign.Left
             )
         )
     }
