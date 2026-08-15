@@ -1,63 +1,49 @@
-# Chand — ویجت تاریخ شمسی و قیمت دلار برای اندروید
+# chand — ویجت تاریخ شمسی و قیمت دلار برای اندروید
 
-Chand یک اپ اندروید مینیمال است که فقط دو ویجت ارائه می‌دهد:
+یک اپ اندروید مینیمال با طراحی نزدیک به ویجت‌های iOS.
 
-- **تاریخ شمسی**: روز هفته، روز ماه، ماه و سال به فارسی؛ کاملاً آفلاین.
-- **قیمت دلار**: قیمت دلار آمریکا به تومان، تغییر نسبت به آخرین قیمت ذخیره‌شده و بروزرسانی دوره‌ای.
+## ویجت‌ها
 
-طراحی پروژه با الهام از تجربه مینیمال ویجت‌های iOS انجام شده، اما کد و UI برای Android به‌صورت مستقل ساخته شده است.
+- **تاریخ شمسی** — روز هفته، روز ماه، ماه و سال؛ کاملاً آفلاین.
+- **قیمت دلار** — قیمت دلار آمریکا به تومان، تغییر نسبت به نرخ قبلی و بروزرسانی با لمس.
+- **تاریخ و دلار - iOS** — یک ویجت عریض که دو کارت مساوی را کنار هم نمایش می‌دهد تا محدودیت Grid بعضی لانچرها مثل MIUI مانع چیدمان مشابه iOS نشود.
+
+## بروزرسانی قیمت
+
+- منبع فعلی قیمت، صفحه عمومی AlanChand است.
+- WorkManager تقریباً هر یک ساعت درخواست بروزرسانی می‌دهد؛ زمان دقیق اجرا تحت کنترل Android است.
+- باز کردن برنامه یا لمس ویجت دلار/ویجت ترکیبی، درخواست بروزرسانی فوری ایجاد می‌کند.
+- آخرین نرخ موفق در SharedPreferences نگه‌داری می‌شود تا در قطعی اینترنت ویجت خالی نشود.
 
 ## فناوری‌ها
 
 - Kotlin
 - Jetpack Compose + Material 3
-- Jetpack Glance App Widgets
+- Native Android App Widgets / RemoteViews
+- Canvas bitmap rendering برای سازگاری بهتر با MIUI
 - WorkManager
-- minSdk 26 (Android 8)
-- targetSdk / compileSdk 36
+- C++/JNI برای سخت‌تر کردن دستکاری بخش هویت تبلیغاتی
+- R8 + resource shrinking برای build سخت‌شده
+- minSdk 26 / targetSdk 36
 
-## منبع قیمت
+## ساخت
 
-برنامه دو مسیر دارد:
-
-1. **AlanChand API رسمی** — اگر توکن تعریف شده باشد.
-2. **AlanChand public currency page** — fallback بدون توکن.
-
-طبق مستندات AlanChand، API رسمی با Bearer Token کار می‌کند. توکن را می‌توان از داخل خود برنامه ذخیره کرد یا هنگام build وارد کرد:
+برای توسعه:
 
 ```bash
-gradle -PALANCHAND_TOKEN="YOUR_TOKEN" :app:assembleDebug
+gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-> برای انتشار عمومی، API token را داخل APK قرار ندهید. بهتر است بعداً یک proxy کوچک سمت سرور اضافه شود.
-
-## ساخت APK
-
-GitHub Actions در هر push روی `main` تست‌ها را اجرا و APK دیباگ را می‌سازد. از بخش **Actions → Android CI → Artifacts** فایل `chand-debug-apk` قابل دریافت است.
-
-## بروزرسانی
-
-- ویجت قیمت با WorkManager هر ۱۵ دقیقه درخواست بروزرسانی می‌دهد.
-- لمس ویجت دلار یک بروزرسانی فوری در صف قرار می‌دهد.
-- اندروید برای حفظ باتری ممکن است اجرای دوره‌ای را کمی به تأخیر بیندازد.
-- ویجت تاریخ از ساعت و منطقه زمانی خود دستگاه استفاده می‌کند.
-
-## تست
+برای build سخت‌شده و قابل نصب در محیط CI:
 
 ```bash
-gradle :app:testDebugUnitTest
+gradle :app:assembleHardened
 ```
 
-## ساختار
+GitHub Actions تست، lint و build سخت‌شده را اجرا می‌کند و artifact با نام `chand-hardened-apk` تولید می‌شود.
 
-```text
-app/src/main/java/com/mtpali/chand/
-├── data/        # دریافت، parse و cache قیمت
-├── date/        # تبدیل تاریخ میلادی به جلالی
-├── util/        # اعداد فارسی
-├── widget/      # دو Glance widget
-├── work/        # WorkManager scheduler/worker
-└── MainActivity.kt
-```
+> برای انتشار عمومی واقعی، APK/AAB باید با یک کلید خصوصی و ثابت release امضا شود که فقط در GitHub Secrets یا Play App Signing نگه‌داری می‌شود. کلید خصوصی نباید داخل این repository قرار گیرد.
 
-جزئیات بیشتر در `docs/ARCHITECTURE.md` است.
+## حقوق استفاده
+
+این پروژه تحت مجوز اختصاصی موجود در فایل `LICENSE` است. عمومی بودن repository به معنی اجازه کپی، بازنشر، تغییر نام یا rebrand کردن برنامه نیست.
