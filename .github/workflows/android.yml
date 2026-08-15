@@ -23,21 +23,28 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        run: >-
+          sdkmanager
+          "platforms;android-36"
+          "build-tools;36.0.0"
+          "ndk;27.2.12479018"
+          "cmake;3.22.1"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.1.0'
 
-      - name: Test and build debug APK
-        env:
-          ALANCHAND_TOKEN: ${{ secrets.ALANCHAND_TOKEN }}
-        run: gradle --no-daemon -PALANCHAND_TOKEN="$ALANCHAND_TOKEN" :app:testDebugUnitTest :app:assembleDebug
+      - name: Test, lint and build hardened APK
+        run: >-
+          gradle --no-daemon
+          :app:testDebugUnitTest
+          :app:lintHardened
+          :app:assembleHardened
 
-      - name: Upload APK
+      - name: Upload hardened APK
         uses: actions/upload-artifact@v4
         with:
-          name: chand-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: chand-hardened-apk
+          path: app/build/outputs/apk/hardened/app-hardened.apk
           if-no-files-found: error
