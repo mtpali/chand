@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import com.mtpali.chand.widget.WidgetRenderer
 import com.mtpali.chand.work.PriceUpdateScheduler
 
@@ -19,10 +20,21 @@ class DollarWidgetReceiver : AppWidgetProvider() {
         WidgetRenderer.updateDollar(context, appWidgetManager, appWidgetIds)
     }
 
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        WidgetRenderer.updateDollar(context, appWidgetManager, intArrayOf(appWidgetId))
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_REFRESH) {
             PriceUpdateScheduler.enqueueNow(context)
+            WidgetRenderer.updateDollarAll(context)
         }
     }
 
