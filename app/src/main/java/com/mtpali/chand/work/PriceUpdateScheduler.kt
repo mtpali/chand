@@ -6,6 +6,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
@@ -46,6 +47,10 @@ object PriceUpdateScheduler {
 
             val request = OneTimeWorkRequestBuilder<PriceUpdateWorker>()
                 .setConstraints(constraints)
+                // A widget tap is an explicit user action, so ask WorkManager to run
+                // the refresh as soon as possible. If expedited quota is unavailable,
+                // it automatically falls back to a normal one-time request.
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .build()
 
             WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
