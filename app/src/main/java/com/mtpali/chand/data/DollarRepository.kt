@@ -4,7 +4,7 @@ import android.content.Context
 
 class DollarRepository(context: Context) {
     private val preferences = AppPreferences(context.applicationContext)
-    private val client = AlanChandClient(preferences)
+    private val client = AlanChandClient()
 
     fun cached(): DollarRate? = preferences.cachedDollarRate()
 
