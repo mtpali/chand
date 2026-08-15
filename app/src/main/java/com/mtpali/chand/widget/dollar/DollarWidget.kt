@@ -8,6 +8,8 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
@@ -22,10 +24,13 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
@@ -67,74 +72,112 @@ private fun DollarContent(rate: DollarRate?) {
             .padding(if (compact) 10.dp else 16.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
-            verticalAlignment = Alignment.Vertical.CenterVertically
-        ) {
-            Text(
-                "🇺🇸",
-                style = TextStyle(fontSize = if (compact) 24.sp else 30.sp, textAlign = TextAlign.Center)
+        if (compact) CompactDollar(rate) else FullDollar(rate)
+    }
+}
+
+@Composable
+private fun CompactDollar(rate: DollarRate?) {
+    Column(
+        modifier = GlanceModifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Image(
+            provider = ImageProvider(R.drawable.us_flag_round),
+            contentDescription = "US Dollar",
+            modifier = GlanceModifier.size(34.dp)
+        )
+        Spacer(GlanceModifier.height(7.dp))
+        Text(
+            rate?.let { PersianNumbers.grouped(it.priceToman) } ?: "—",
+            style = TextStyle(
+                color = GlanceTheme.colors.onSurface,
+                fontSize = 23.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
             )
-            if (!compact) {
+        )
+    }
+}
+
+@Composable
+private fun FullDollar(rate: DollarRate?) {
+    val delta = rate?.deltaToman ?: 0L
+    val deltaText = when {
+        delta > 0 -> "↑ ${PersianNumbers.grouped(delta)}"
+        delta < 0 -> "↓ ${PersianNumbers.grouped(-delta)}"
+        rate != null -> "بدون تغییر"
+        else -> "لمس برای بروزرسانی"
+    }
+    val deltaColor = when {
+        delta > 0 -> GlanceTheme.colors.error
+        delta < 0 -> GlanceTheme.colors.primary
+        else -> GlanceTheme.colors.onSurfaceVariant
+    }
+
+    Column(
+        modifier = GlanceModifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.Top
+    ) {
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                provider = ImageProvider(R.drawable.us_flag_round),
+                contentDescription = "US Dollar",
+                modifier = GlanceModifier.size(42.dp)
+            )
+            Column(
+                modifier = GlanceModifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.End
+            ) {
                 Text(
                     "دلار آمریکا",
+                    modifier = GlanceModifier.fillMaxWidth(),
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurface,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Right
                     )
                 )
                 Text(
                     "USD",
+                    modifier = GlanceModifier.fillMaxWidth(),
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurfaceVariant,
                         fontSize = 12.sp,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Right
                     )
                 )
-                Spacer(GlanceModifier.height(7.dp))
-                val delta = rate?.deltaToman ?: 0L
-                val deltaText = when {
-                    delta > 0 -> "↑ ${PersianNumbers.grouped(delta)}"
-                    delta < 0 -> "↓ ${PersianNumbers.grouped(-delta)}"
-                    rate != null -> "بدون تغییر"
-                    else -> "برای بروزرسانی لمس کنید"
-                }
-                val deltaColor = when {
-                    delta > 0 -> GlanceTheme.colors.error
-                    delta < 0 -> GlanceTheme.colors.primary
-                    else -> GlanceTheme.colors.onSurfaceVariant
-                }
-                Text(
-                    deltaText,
-                    style = TextStyle(
-                        color = deltaColor,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center
-                    )
-                )
-                Spacer(GlanceModifier.height(2.dp))
             }
-            Text(
-                rate?.let { PersianNumbers.grouped(it.priceToman) } ?: "—",
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurface,
-                    fontSize = if (compact) 25.sp else 34.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-            )
-            Text(
-                "تومان",
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = if (compact) 10.sp else 11.sp,
-                    textAlign = TextAlign.Center
-                )
-            )
         }
+
+        Spacer(GlanceModifier.height(12.dp))
+        Text(
+            deltaText,
+            modifier = GlanceModifier.fillMaxWidth(),
+            style = TextStyle(
+                color = deltaColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Left
+            )
+        )
+        Spacer(GlanceModifier.height(2.dp))
+        Text(
+            rate?.let { PersianNumbers.grouped(it.priceToman) } ?: "—",
+            modifier = GlanceModifier.fillMaxWidth(),
+            style = TextStyle(
+                color = GlanceTheme.colors.onSurface,
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        )
     }
 }
 

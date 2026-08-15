@@ -61,8 +61,8 @@ private fun DateContent(date: JalaliDate) {
         contentAlignment = Alignment.Center
     ) {
         Column(
-            horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
-            verticalAlignment = Alignment.Vertical.CenterVertically
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             if (!compact) {
                 Text(
@@ -74,18 +74,18 @@ private fun DateContent(date: JalaliDate) {
                         textAlign = TextAlign.Center
                     )
                 )
-                Spacer(GlanceModifier.height(6.dp))
+                Spacer(GlanceModifier.height(5.dp))
             }
             Text(
                 PersianNumbers.digits(date.day),
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurface,
-                    fontSize = if (compact) 38.sp else 56.sp,
+                    fontSize = if (compact) 40.sp else 64.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
             )
-            Spacer(GlanceModifier.height(if (compact) 2.dp else 6.dp))
+            Spacer(GlanceModifier.height(if (compact) 1.dp else 4.dp))
             Text(
                 if (compact) date.monthName else "${date.monthName} ${PersianNumbers.digits(date.year)}",
                 style = TextStyle(
