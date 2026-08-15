@@ -5,6 +5,7 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.mtpali.chand.data.DollarRepository
 import com.mtpali.chand.widget.WidgetRenderer
+import com.mtpali.chand.widget.combined.CombinedWidgetRenderer
 
 class PriceUpdateWorker(
     appContext: Context,
@@ -16,13 +17,13 @@ class PriceUpdateWorker(
             DollarRepository(applicationContext).refresh()
             WidgetRenderer.updateDollarAll(applicationContext)
             WidgetRenderer.updateDateAll(applicationContext)
-            WidgetRenderer.updateCombinedAll(applicationContext)
+            CombinedWidgetRenderer.updateAll(applicationContext)
             Result.success()
         }.getOrElse {
             // Keep the last cached value visible even if the network request failed.
             WidgetRenderer.updateDollarAll(applicationContext)
             WidgetRenderer.updateDateAll(applicationContext)
-            WidgetRenderer.updateCombinedAll(applicationContext)
+            CombinedWidgetRenderer.updateAll(applicationContext)
             if (runAttemptCount < 3) Result.retry() else Result.failure()
         }
     }
