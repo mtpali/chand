@@ -1,8 +1,12 @@
 package com.mtpali.chand.widget.date
 
-import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.Context
+import com.mtpali.chand.widget.WidgetRenderer
 
-class PersianDateWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = PersianDateWidget()
+class PersianDateWidgetReceiver : AppWidgetProvider() {
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        WidgetRenderer.updateDate(context, appWidgetManager, appWidgetIds)
+    }
 }
