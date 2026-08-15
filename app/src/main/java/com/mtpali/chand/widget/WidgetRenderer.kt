@@ -31,9 +31,12 @@ import kotlin.math.min
  */
 object WidgetRenderer {
 
-    private const val FALLBACK_SIZE_DP = 144
-    private const val IOS_LIKE_MAX_RENDER_DP = 148
-    private const val MAX_BITMAP_SIDE_PX = 440
+    // The provider allows roughly 1x1, 2x2 and 3x3 host sizes. 2x2 stays the default/medium
+    // iOS-like size so two equal widgets can sit next to each other on a compatible grid.
+    private const val FALLBACK_SIZE_DP = 110
+    private const val MAX_RENDER_DP = 180
+    private const val MIN_RENDER_DP = 40
+    private const val MAX_BITMAP_SIDE_PX = 520
 
     fun updateDateAll(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
@@ -87,9 +90,9 @@ object WidgetRenderer {
     private fun widgetSizeDp(manager: AppWidgetManager, id: Int): Pair<Int, Int> {
         val options = manager.getAppWidgetOptions(id)
         val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, FALLBACK_SIZE_DP)
-            .coerceIn(90, IOS_LIKE_MAX_RENDER_DP)
+            .coerceIn(MIN_RENDER_DP, MAX_RENDER_DP)
         val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, FALLBACK_SIZE_DP)
-            .coerceIn(90, IOS_LIKE_MAX_RENDER_DP)
+            .coerceIn(MIN_RENDER_DP, MAX_RENDER_DP)
         return width to height
     }
 
@@ -269,8 +272,8 @@ object WidgetRenderer {
         }
         val deltaColor = when {
             rate == null -> Color.rgb(136, 136, 141)
-            delta != null && delta > 0 -> Color.rgb(190, 69, 69)   // iOS-like red
-            delta != null && delta < 0 -> Color.rgb(75, 135, 103)   // iOS-like green
+            delta != null && delta > 0 -> Color.rgb(190, 69, 69)
+            delta != null && delta < 0 -> Color.rgb(75, 135, 103)
             else -> Color.rgb(136, 136, 141)
         }
         val deltaPaint = textPaint(
