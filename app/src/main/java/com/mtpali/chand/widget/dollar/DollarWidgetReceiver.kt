@@ -12,14 +12,11 @@ class DollarWidgetReceiver : AppWidgetProvider() {
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
-        // Do not make scheduling part of the critical launcher rendering path.
         PriceUpdateScheduler.schedule(context)
         PriceUpdateScheduler.enqueueNow(context)
     }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        // Always render the cached value first. Even if networking/WorkManager is unavailable,
-        // the launcher still receives a valid bitmap and never gets a blank provider.
         WidgetRenderer.updateDollar(context, appWidgetManager, appWidgetIds)
         PriceUpdateScheduler.schedule(context)
     }
@@ -31,13 +28,13 @@ class DollarWidgetReceiver : AppWidgetProvider() {
         newOptions: Bundle
     ) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
-        WidgetRenderer.updateDollar(context, appWidgetManager, intArrayOf(appWidgetId))
+        // Render from the options in this exact callback to avoid MIUI's delayed resize race.
+        WidgetRenderer.updateDollar(context, appWidgetManager, appWidgetId, newOptions)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_REFRESH) {
-            // Show the cached card immediately, then request a network refresh.
             WidgetRenderer.updateDollarAll(context)
             PriceUpdateScheduler.enqueueNow(context)
         }
