@@ -18,6 +18,8 @@ class PersianDateWidgetReceiver : AppWidgetProvider() {
         newOptions: Bundle
     ) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
-        WidgetRenderer.updateDate(context, appWidgetManager, intArrayOf(appWidgetId))
+        // Use the options delivered with this resize event directly. Re-reading them from the
+        // manager can race with MIUI's grid animation and make a medium widget jump larger later.
+        WidgetRenderer.updateDate(context, appWidgetManager, appWidgetId, newOptions)
     }
 }
