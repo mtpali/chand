@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">چند</string>
+    <string name="app_name">chand</string>
     <string name="date_widget_name">تاریخ شمسی</string>
     <string name="date_widget_description">نمایش مینیمال روز، ماه و سال شمسی</string>
     <string name="dollar_widget_name">قیمت دلار</string>
