@@ -24,7 +24,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.mtpali.chand.data.AppPreferences
 import com.mtpali.chand.date.JalaliDate
 import com.mtpali.chand.promo.PromoSecrets
@@ -134,7 +134,7 @@ private fun ChandScreen() {
             ) {
                 Text("بروزرسانی خودکار", fontWeight = FontWeight.Bold)
                 Text(
-                    "نرخ دلار هر ۱ ساعت بررسی می‌شود. برای بروزرسانی زودتر کافی است برنامه چند را باز کنید.",
+                    "نرخ دلار هر ۱ ساعت بررسی می‌شود. برای بروزرسانی فوری روی ویجت دلار بزنید یا برنامه چند را باز کنید.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -146,7 +146,7 @@ private fun ChandScreen() {
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Text(
-                "ویجت‌ها از بخش Widgets صفحه اصلی گوشی اضافه می‌شوند و با اندازه ثابت ۲×۲ طراحی شده‌اند تا دو ویجت منظم کنار هم قرار بگیرند.",
+                "ویجت‌ها از بخش Widgets صفحه اصلی گوشی اضافه می‌شوند. اندازه پیشنهادی ۲×۲ است و امکان تغییر اندازه کنترل‌شده برای چیدمان دو ویجت کنار هم وجود دارد.",
                 modifier = Modifier.padding(17.dp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -251,27 +251,163 @@ private fun InstagramAccountsDialog(
     onDismiss: () -> Unit,
     onOpen: (String) -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(26.dp),
-        title = { Text(PromoSecrets.instagramTitle) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("یکی از صفحه‌ها را انتخاب کنید:")
-                PromoSecrets.instagramAccounts.forEach { account ->
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(30.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            shadowElevation = 18.dp
+        ) {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    Color(0xFF6D28D9),
+                                    Color(0xFFD946EF),
+                                    Color(0xFFF97316)
+                                )
+                            )
+                        )
+                        .padding(horizontal = 22.dp, vertical = 22.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(11.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.18f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "◎",
+                                    color = Color.White,
+                                    fontSize = 26.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Column {
+                                Text(
+                                    PromoSecrets.instagramTitle,
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "صفحه موردنظرت را انتخاب کن",
+                                    color = Color.White.copy(alpha = 0.88f),
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    PromoSecrets.instagramAccounts.forEachIndexed { index, account ->
+                        InstagramAccountCard(
+                            account = account,
+                            index = index,
+                            onClick = { onOpen(account) }
+                        )
+                    }
+
+                    Spacer(Modifier.height(2.dp))
+
                     TextButton(
-                        onClick = { onOpen(account) },
-                        modifier = Modifier.fillMaxWidth()
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
                     ) {
-                        Text("@$account", fontWeight = FontWeight.Medium)
+                        Text(
+                            "بستن",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("بستن") }
         }
-    )
+    }
+}
+
+@Composable
+private fun InstagramAccountCard(
+    account: String,
+    index: Int,
+    onClick: () -> Unit
+) {
+    val accent = when (index % 3) {
+        0 -> listOf(Color(0xFF7C3AED), Color(0xFFD946EF))
+        1 -> listOf(Color(0xFFD946EF), Color(0xFFF97316))
+        else -> listOf(Color(0xFFEC4899), Color(0xFF8B5CF6))
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(21.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(21.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(accent)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "◎",
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    "@$account",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    if (index == 0) "صفحه اصلی موبایل تینا" else "صفحه موبایل تینا",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Text(
+                "‹",
+                fontSize = 27.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 @Composable
