@@ -26,6 +26,7 @@ object PromoSecrets {
         )
 
     val telegramUser: String get() = decode(84, intArrayOf(34,36,58,109,98,103))
+    val instagramPackage: String get() = decode(119, intArrayOf(20,24,26,89,30,25,4,3,22,16,5,22,26,89,22,25,19,5,24,30,19))
 
     fun instagramAppUri(username: String): String =
         decode(91, intArrayOf(50,53,40,47,58,60,41,58,54,97,116,116,46,40,62,41,100,46,40,62,41,53,58,54,62,102)) + username
