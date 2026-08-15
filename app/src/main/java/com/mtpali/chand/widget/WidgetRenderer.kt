@@ -32,6 +32,7 @@ import kotlin.math.min
 object WidgetRenderer {
 
     private const val FALLBACK_SIZE_DP = 144
+    private const val IOS_LIKE_MAX_RENDER_DP = 148
     private const val MAX_BITMAP_SIDE_PX = 440
 
     fun updateDateAll(context: Context) {
@@ -67,8 +68,10 @@ object WidgetRenderer {
             val views = RemoteViews(context.packageName, R.layout.widget_dollar_ios)
             views.setImageViewBitmap(R.id.dollar_widget_image, bitmap)
 
+            // Every tap on the dollar widget requests a fresh quote.
             val refreshIntent = Intent(context, DollarWidgetReceiver::class.java).apply {
                 action = DollarWidgetReceiver.ACTION_REFRESH
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
             }
             val pendingIntent = PendingIntent.getBroadcast(
                 context,
@@ -84,9 +87,9 @@ object WidgetRenderer {
     private fun widgetSizeDp(manager: AppWidgetManager, id: Int): Pair<Int, Int> {
         val options = manager.getAppWidgetOptions(id)
         val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, FALLBACK_SIZE_DP)
-            .coerceIn(90, 270)
+            .coerceIn(90, IOS_LIKE_MAX_RENDER_DP)
         val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, FALLBACK_SIZE_DP)
-            .coerceIn(90, 270)
+            .coerceIn(90, IOS_LIKE_MAX_RENDER_DP)
         return width to height
     }
 
@@ -109,8 +112,6 @@ object WidgetRenderer {
         canvas.drawColor(Color.TRANSPARENT)
 
         val hostSide = min(widthPx, heightPx).toFloat()
-        // Keep only a hairline transparent safety margin. This makes the visible card
-        // about 3–4% larger than v1.2.1 while preserving fully rounded transparent corners.
         val outerInset = 0.65f * scale
         val side = (hostSide - outerInset * 2f).coerceAtLeast(1f)
         val left = (widthPx - side) / 2f
@@ -122,7 +123,6 @@ object WidgetRenderer {
             style = Paint.Style.FILL
             isDither = true
         }
-        // iOS medium widgets use a generous continuous-looking corner radius.
         val radius = side * 0.195f
         canvas.drawRoundRect(card, radius, radius, cardPaint)
 
@@ -260,31 +260,31 @@ object WidgetRenderer {
             code
         )
 
-        val delta: Long? = rate?.deltaToman
+        val delta = rate?.deltaToman
         val deltaText = when {
             rate == null -> "لمس برای بروزرسانی"
-            delta != null && delta > 0 -> "↑ ${PersianNumbers.grouped(delta)}"
-            delta != null && delta < 0 -> "↓ ${PersianNumbers.grouped(-delta)}"
+            delta != null && delta > 0 -> "↑${PersianNumbers.grouped(delta)}"
+            delta != null && delta < 0 -> "↓${PersianNumbers.grouped(-delta)}"
             else -> "بدون تغییر"
         }
         val deltaColor = when {
             rate == null -> Color.rgb(136, 136, 141)
-            delta != null && delta > 0 -> Color.rgb(183, 73, 73)
-            delta != null && delta < 0 -> Color.rgb(79, 135, 106)
+            delta != null && delta > 0 -> Color.rgb(190, 69, 69)   // iOS-like red
+            delta != null && delta < 0 -> Color.rgb(75, 135, 103)   // iOS-like green
             else -> Color.rgb(136, 136, 141)
         }
         val deltaPaint = textPaint(
             deltaColor,
-            s.side * if (rate == null) 0.073f else 0.080f,
+            s.side * if (rate == null) 0.071f else 0.078f,
             regular,
             Paint.Align.LEFT
         )
-        fitText(deltaPaint, deltaText, s.side * 0.79f, s.side * 0.056f)
+        fitText(deltaPaint, deltaText, s.side * 0.79f, s.side * 0.055f)
         drawCenteredText(
             s.canvas,
             deltaText,
             left,
-            s.card.top + s.side * 0.602f,
+            s.card.top + s.side * 0.592f,
             deltaPaint
         )
 
