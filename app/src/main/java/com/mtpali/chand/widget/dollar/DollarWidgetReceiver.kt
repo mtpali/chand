@@ -12,12 +12,16 @@ class DollarWidgetReceiver : AppWidgetProvider() {
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
+        // Do not make scheduling part of the critical launcher rendering path.
         PriceUpdateScheduler.schedule(context)
         PriceUpdateScheduler.enqueueNow(context)
     }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        // Always render the cached value first. Even if networking/WorkManager is unavailable,
+        // the launcher still receives a valid bitmap and never gets a blank provider.
         WidgetRenderer.updateDollar(context, appWidgetManager, appWidgetIds)
+        PriceUpdateScheduler.schedule(context)
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -33,8 +37,9 @@ class DollarWidgetReceiver : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_REFRESH) {
-            PriceUpdateScheduler.enqueueNow(context)
+            // Show the cached card immediately, then request a network refresh.
             WidgetRenderer.updateDollarAll(context)
+            PriceUpdateScheduler.enqueueNow(context)
         }
     }
 
