@@ -1,11 +1,12 @@
 package com.mtpali.chand.work
 
 import android.content.Context
+import androidx.glance.appwidget.updateAll
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.mtpali.chand.data.DollarRepository
-import com.mtpali.chand.widget.dollar.DollarWidget
 import com.mtpali.chand.widget.date.PersianDateWidget
+import com.mtpali.chand.widget.dollar.DollarWidget
 import kotlinx.coroutines.runBlocking
 
 class PriceUpdateWorker(

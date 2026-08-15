@@ -35,11 +35,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.LocalLayoutDirection
 import com.mtpali.chand.data.AppPreferences
 import com.mtpali.chand.data.WidgetThemeMode
 import com.mtpali.chand.date.JalaliDate
