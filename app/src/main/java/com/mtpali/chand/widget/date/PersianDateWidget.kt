@@ -13,7 +13,9 @@ import androidx.glance.LocalSize
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.appWidgetBackground
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -35,8 +37,6 @@ import com.mtpali.chand.util.PersianNumbers
 import com.mtpali.chand.widget.WidgetPalette
 
 class PersianDateWidget : GlanceAppWidget() {
-    // Exact sizing lets us compensate for launchers such as MIUI that provide
-    // a tall 2x2 host area. The visible card itself stays square.
     override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -54,7 +54,7 @@ class PersianDateWidget : GlanceAppWidget() {
 private fun DateContent(date: JalaliDate) {
     val available = LocalSize.current
     val shortestSide = minOf(available.width, available.height)
-    val cardSide = if (shortestSide > 84.dp) shortestSide - 4.dp else shortestSide
+    val cardSide = if (shortestSide > 84.dp) shortestSide - 2.dp else shortestSide
     val compact = cardSide < 108.dp
 
     Box(
@@ -64,11 +64,14 @@ private fun DateContent(date: JalaliDate) {
         Box(
             modifier = GlanceModifier
                 .size(cardSide)
+                .background(GlanceTheme.colors.widgetBackground)
+                .cornerRadius(30.dp)
                 .appWidgetBackground(),
             contentAlignment = Alignment.Center
         ) {
-            // Using a drawable as an image gives us rounded corners on Android 11
-            // and older, where Glance's runtime corner radius is not reliable.
+            // Fallback rounded-card layer for launchers/Android versions where
+            // Glance runtime clipping is limited. The direct white background above
+            // guarantees that the widget never becomes transparent.
             Image(
                 provider = ImageProvider(R.drawable.widget_card_white),
                 contentDescription = null,
@@ -79,7 +82,7 @@ private fun DateContent(date: JalaliDate) {
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .padding(if (compact) 10.dp else 13.dp),
+                    .padding(if (compact) 10.dp else 14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -88,27 +91,27 @@ private fun DateContent(date: JalaliDate) {
                         date.dayOfWeek,
                         style = TextStyle(
                             color = GlanceTheme.colors.onSurface,
-                            fontSize = 15.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Medium,
                             fontFamily = FontFamily.SansSerif,
                             textAlign = TextAlign.Center
                         )
                     )
-                    Spacer(GlanceModifier.height(3.dp))
+                    Spacer(GlanceModifier.height(2.dp))
                 }
 
                 Text(
                     PersianNumbers.digits(date.day),
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurface,
-                        fontSize = if (compact) 39.sp else 51.sp,
+                        fontSize = if (compact) 40.sp else 55.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.SansSerif,
                         textAlign = TextAlign.Center
                     )
                 )
 
-                Spacer(GlanceModifier.height(if (compact) 1.dp else 2.dp))
+                Spacer(GlanceModifier.height(if (compact) 1.dp else 1.dp))
 
                 Text(
                     if (compact) date.monthName else "${date.monthName} ${PersianNumbers.digits(date.year)}",
