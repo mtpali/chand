@@ -9,16 +9,17 @@ import com.mtpali.chand.data.WidgetThemeMode
 object WidgetPalette {
     private val iosLight = lightColorScheme(
         primary = Color(0xFF4F876A),
-        error = Color(0xFFB74949),
-        surface = Color(0xFFFFFDFB),
-        background = Color(0xFFFFFDFB),
+        error = Color(0xFFC85050),
+        surface = Color(0xFFFFFFFF),
+        background = Color(0xFFFFFFFF),
         onSurface = Color(0xFF050505),
-        onSurfaceVariant = Color(0xFF8A8A8E)
+        onSurfaceVariant = Color(0xFF8E8E93)
     )
 
     private val lightProviders = Material3ColorProviders(iosLight)
 
-    // The widgets intentionally stay light even when the phone is in dark mode.
-    // This matches the visual reference and keeps the home-screen cards consistent.
+    // Widget styling is intentionally fixed to a white card with dark typography,
+    // independent of the phone/app dark theme, to match the iOS reference.
+    @Suppress("UNUSED_PARAMETER")
     fun colors(mode: WidgetThemeMode): ColorProviders = lightProviders
 }
