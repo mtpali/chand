@@ -16,11 +16,13 @@ class PriceUpdateWorker(
             DollarRepository(applicationContext).refresh()
             WidgetRenderer.updateDollarAll(applicationContext)
             WidgetRenderer.updateDateAll(applicationContext)
+            WidgetRenderer.updateCombinedAll(applicationContext)
             Result.success()
         }.getOrElse {
             // Keep the last cached value visible even if the network request failed.
             WidgetRenderer.updateDollarAll(applicationContext)
             WidgetRenderer.updateDateAll(applicationContext)
+            WidgetRenderer.updateCombinedAll(applicationContext)
             if (runAttemptCount < 3) Result.retry() else Result.failure()
         }
     }
