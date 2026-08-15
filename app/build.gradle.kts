@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -23,7 +25,7 @@ val downloadWidgetFonts by tasks.registering {
         )
         files.forEach { (target, source) ->
             if (!target.exists() || target.length() < 100_000L) {
-                java.net.URI(source).toURL().openStream().use { input ->
+                URI(source).toURL().openStream().use { input ->
                     target.outputStream().use { output -> input.copyTo(output) }
                 }
             }
