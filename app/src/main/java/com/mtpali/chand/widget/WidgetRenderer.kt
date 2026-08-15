@@ -24,19 +24,16 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Renders each widget into a single bitmap and sends only a plain ImageView to the launcher.
- * This is intentionally conservative: several MIUI launcher versions reject custom-font
- * TextViews inside RemoteViews and show “Can't load widget”. Bitmap rendering gives us exact
- * rounded corners, embedded Persian typography and consistent layout across launchers.
+ * Bitmap rendering keeps the widgets stable on MIUI while allowing the launcher to expose
+ * several grid sizes. The default target remains 2x2 (the iOS-like medium size), while the
+ * provider can now move through smaller and larger grid spans without changing the design.
  */
 object WidgetRenderer {
 
-    // The provider allows roughly 1x1, 2x2 and 3x3 host sizes. 2x2 stays the default/medium
-    // iOS-like size so two equal widgets can sit next to each other on a compatible grid.
-    private const val FALLBACK_SIZE_DP = 110
-    private const val MAX_RENDER_DP = 180
+    private const val FALLBACK_SIZE_DP = 148
+    private const val MAX_RENDER_DP = 250
     private const val MIN_RENDER_DP = 40
-    private const val MAX_BITMAP_SIDE_PX = 520
+    private const val MAX_BITMAP_SIDE_PX = 620
 
     fun updateDateAll(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
@@ -71,7 +68,6 @@ object WidgetRenderer {
             val views = RemoteViews(context.packageName, R.layout.widget_dollar_ios)
             views.setImageViewBitmap(R.id.dollar_widget_image, bitmap)
 
-            // Every tap on the dollar widget requests a fresh quote.
             val refreshIntent = Intent(context, DollarWidgetReceiver::class.java).apply {
                 action = DollarWidgetReceiver.ACTION_REFRESH
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
@@ -177,13 +173,7 @@ object WidgetRenderer {
             regular,
             Paint.Align.CENTER
         )
-        drawCenteredText(
-            s.canvas,
-            date.dayOfWeek,
-            centerX,
-            s.card.top + s.side * 0.252f,
-            weekday
-        )
+        drawCenteredText(s.canvas, date.dayOfWeek, centerX, s.card.top + s.side * 0.252f, weekday)
 
         val number = PersianNumbers.digits(date.day)
         val numberPaint = textPaint(
@@ -193,13 +183,7 @@ object WidgetRenderer {
             Paint.Align.CENTER
         )
         fitText(numberPaint, number, s.side * 0.64f, s.side * 0.24f)
-        drawCenteredText(
-            s.canvas,
-            number,
-            centerX,
-            s.card.top + s.side * 0.505f,
-            numberPaint
-        )
+        drawCenteredText(s.canvas, number, centerX, s.card.top + s.side * 0.505f, numberPaint)
 
         val fullDate = "${date.monthName} ${PersianNumbers.digits(date.year)}"
         val fullDatePaint = textPaint(
@@ -209,13 +193,7 @@ object WidgetRenderer {
             Paint.Align.CENTER
         )
         fitText(fullDatePaint, fullDate, s.side * 0.84f, s.side * 0.078f)
-        drawCenteredText(
-            s.canvas,
-            fullDate,
-            centerX,
-            s.card.top + s.side * 0.792f,
-            fullDatePaint
-        )
+        drawCenteredText(s.canvas, fullDate, centerX, s.card.top + s.side * 0.792f, fullDatePaint)
 
         return s.bitmap
     }
@@ -241,13 +219,7 @@ object WidgetRenderer {
             regular,
             Paint.Align.RIGHT
         )
-        drawCenteredText(
-            s.canvas,
-            "دلار آمریکا",
-            right,
-            s.card.top + s.side * 0.162f,
-            title
-        )
+        drawCenteredText(s.canvas, "دلار آمریکا", right, s.card.top + s.side * 0.162f, title)
 
         val code = textPaint(
             Color.rgb(136, 136, 141),
@@ -255,13 +227,7 @@ object WidgetRenderer {
             Typeface.create("sans-serif", Typeface.NORMAL),
             Paint.Align.RIGHT
         )
-        drawCenteredText(
-            s.canvas,
-            "USD",
-            right,
-            s.card.top + s.side * 0.244f,
-            code
-        )
+        drawCenteredText(s.canvas, "USD", right, s.card.top + s.side * 0.244f, code)
 
         val delta = rate?.deltaToman
         val deltaText = when {
@@ -283,13 +249,7 @@ object WidgetRenderer {
             Paint.Align.LEFT
         )
         fitText(deltaPaint, deltaText, s.side * 0.79f, s.side * 0.055f)
-        drawCenteredText(
-            s.canvas,
-            deltaText,
-            left,
-            s.card.top + s.side * 0.592f,
-            deltaPaint
-        )
+        drawCenteredText(s.canvas, deltaText, left, s.card.top + s.side * 0.592f, deltaPaint)
 
         val price = rate?.let { PersianNumbers.grouped(it.priceToman) } ?: "—"
         val pricePaint = textPaint(
@@ -299,13 +259,7 @@ object WidgetRenderer {
             Paint.Align.LEFT
         )
         fitText(pricePaint, price, s.side * 0.81f, s.side * 0.175f)
-        drawCenteredText(
-            s.canvas,
-            price,
-            left,
-            s.card.top + s.side * 0.790f,
-            pricePaint
-        )
+        drawCenteredText(s.canvas, price, left, s.card.top + s.side * 0.790f, pricePaint)
 
         return s.bitmap
     }
