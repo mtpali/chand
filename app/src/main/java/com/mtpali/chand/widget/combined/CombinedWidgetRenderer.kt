@@ -83,7 +83,6 @@ object CombinedWidgetRenderer {
         val views = RemoteViews(context.packageName, R.layout.widget_combined_ios)
         views.setImageViewBitmap(R.id.combined_widget_image, bitmap)
 
-        // Tapping the combined widget refreshes the dollar quote while keeping both cards visible.
         val refreshIntent = Intent(context, CombinedWidgetReceiver::class.java).apply {
             action = CombinedWidgetReceiver.ACTION_REFRESH
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
@@ -151,15 +150,19 @@ object CombinedWidgetRenderer {
         val canvas = Canvas(bitmap)
         canvas.drawColor(Color.TRANSPARENT)
 
-        val edgeDp = 3.5f
-        val gapDp = 8f
+        // The combined host is intentionally wider than the visible cards. Fill more of that
+        // host so the result matches the iOS two-medium-widget composition instead of looking
+        // like two small cards floating in a large Android grid slot.
+        val edgeDp = 2f
+        val gapDp = 6f
         val availableSideDp = min(
             heightDp - edgeDp * 2f,
             (widthDp - edgeDp * 2f - gapDp) / 2f
         ).coerceAtLeast(72f)
 
-        // Keep the same visual scale the user approved in the separate widgets.
-        val sideDp = min(availableSideDp, 132f)
+        // 158dp is about 20% larger than the previous approved 132dp cards, while still leaving
+        // a clean iOS-like gutter between the pair on typical 5-column MIUI home screens.
+        val sideDp = min(availableSideDp, 158f)
         val sidePx = sideDp * scale
         val gapPx = gapDp * scale
         val pairWidth = sidePx * 2f + gapPx
