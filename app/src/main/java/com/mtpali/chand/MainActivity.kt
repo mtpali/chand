@@ -1,7 +1,5 @@
 package com.mtpali.chand
 
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -30,8 +28,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,8 +54,6 @@ import com.mtpali.chand.data.AppPreferences
 import com.mtpali.chand.date.JalaliDate
 import com.mtpali.chand.promo.PromoSecrets
 import com.mtpali.chand.util.PersianNumbers
-import com.mtpali.chand.widget.date.PersianDateWidgetReceiver
-import com.mtpali.chand.widget.dollar.DollarWidgetReceiver
 import com.mtpali.chand.work.PriceUpdateScheduler
 
 class MainActivity : ComponentActivity() {
@@ -70,7 +64,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        // Opening the app is the user's manual refresh gesture.
+        // Opening the app is the manual refresh gesture.
         PriceUpdateScheduler.schedule(this)
         PriceUpdateScheduler.enqueueNow(this)
     }
@@ -92,8 +86,6 @@ private fun ChandRoot() {
 private fun ChandScreen() {
     val context = LocalContext.current
     val prefs = remember { AppPreferences(context) }
-    var apiToken by remember { mutableStateOf(prefs.userApiToken()) }
-    var tokenSaved by remember { mutableStateOf(false) }
     var showInstagramDialog by remember { mutableStateOf(false) }
     val date = remember { JalaliDate.today() }
     val cachedRate = prefs.cachedDollarRate()
@@ -117,7 +109,7 @@ private fun ChandScreen() {
     ) {
         Text("چند", fontSize = 34.sp, fontWeight = FontWeight.Bold)
         Text(
-            "دو ویجت مینیمال برای تاریخ شمسی و قیمت دلار.",
+            "تاریخ شمسی و قیمت دلار، ساده و همیشه در دسترس.",
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
@@ -140,48 +132,24 @@ private fun ChandScreen() {
                 Modifier.padding(17.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text("بروزرسانی هوشمند", fontWeight = FontWeight.Bold)
+                Text("بروزرسانی خودکار", fontWeight = FontWeight.Bold)
                 Text(
-                    "نرخ دلار هر ۱ ساعت به‌صورت خودکار بررسی می‌شود. برای بروزرسانی زودتر فقط برنامه چند را باز کنید.",
+                    "نرخ دلار هر ۱ ساعت بررسی می‌شود. برای بروزرسانی زودتر کافی است برنامه چند را باز کنید.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        OutlinedButton(
-            onClick = { requestPinWidget(context, PersianDateWidgetReceiver::class.java) },
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp)
-        ) { Text("افزودن ویجت تاریخ") }
-
-        OutlinedButton(
-            onClick = { requestPinWidget(context, DollarWidgetReceiver::class.java) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp)
-        ) { Text("افزودن ویجت دلار") }
-
-        Text("تنظیمات پیشرفته منبع قیمت", fontWeight = FontWeight.Bold)
-        Text(
-            "در حالت عادی نیازی به تنظیم چیزی نیست. اگر توکن رسمی AlanChand دارید می‌توانید آن را وارد کنید.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        OutlinedTextField(
-            value = apiToken,
-            onValueChange = { apiToken = it; tokenSaved = false },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("AlanChand API Token (اختیاری)") },
-            singleLine = true,
-            shape = RoundedCornerShape(18.dp)
-        )
-        OutlinedButton(
-            onClick = {
-                prefs.setUserApiToken(apiToken)
-                tokenSaved = true
-                PriceUpdateScheduler.enqueueNow(context)
-            },
-            shape = RoundedCornerShape(18.dp)
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            Text(if (tokenSaved) "ذخیره شد ✓" else "ذخیره توکن")
+            Text(
+                "ویجت‌ها از بخش Widgets صفحه اصلی گوشی اضافه می‌شوند و با اندازه ثابت ۲×۲ طراحی شده‌اند تا دو ویجت منظم کنار هم قرار بگیرند.",
+                modifier = Modifier.padding(17.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         Spacer(Modifier.height(4.dp))
@@ -317,13 +285,6 @@ private fun PreviewCard(title: String, body: String) {
             Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Text(body, fontSize = 20.sp)
         }
-    }
-}
-
-private fun requestPinWidget(context: Context, receiver: Class<*>) {
-    val manager = AppWidgetManager.getInstance(context)
-    if (manager.isRequestPinAppWidgetSupported) {
-        manager.requestPinAppWidget(ComponentName(context, receiver), null, null)
     }
 }
 
