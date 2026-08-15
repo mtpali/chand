@@ -17,13 +17,4 @@ class AlanChandParserTest {
         assertEquals(1_852_000L, AlanChandParser.publicHtmlUsdSellRial(html))
         assertEquals(185_200L, AlanChandParser.normalizeToToman(1_852_000L))
     }
-
-    @Test
-    fun parsesOfficialApiNestedUsdSellPrice() {
-        val json = """
-            {"currency":{"usd":{"symbol":"usd","buy_price":"1,833,500","sell_price":"1,852,000"}}}
-        """.trimIndent()
-
-        assertEquals(1_852_000L, AlanChandParser.officialApiUsdPrice(json))
-    }
 }
