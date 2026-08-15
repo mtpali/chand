@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -16,11 +17,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,8 +52,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import com.mtpali.chand.data.AppPreferences
+import com.mtpali.chand.date.JalaliDate
 import com.mtpali.chand.promo.PromoSecrets
+import com.mtpali.chand.util.PersianNumbers
 import com.mtpali.chand.work.PriceUpdateScheduler
 
 private val ChandFont = FontFamily(
@@ -58,6 +66,9 @@ private val ChandFont = FontFamily(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Apply RTL before Compose draws its first frame. This also prevents the Instagram
+        // account panel from briefly appearing LTR and then flipping to RTL.
+        window.decorView.layoutDirection = View.LAYOUT_DIRECTION_RTL
         setContent { ChandRoot() }
     }
 
@@ -84,66 +95,123 @@ private fun ChandRoot() {
 @Composable
 private fun ChandScreen() {
     val context = LocalContext.current
-    var showInstagramDialog by remember { mutableStateOf(false) }
+    val prefs = remember { AppPreferences(context) }
+    var showInstagramPanel by remember { mutableStateOf(false) }
+    val date = remember { JalaliDate.today() }
+    val cachedRate = prefs.cachedDollarRate()
 
-    if (showInstagramDialog) {
-        InstagramAccountsDialog(
-            onDismiss = { showInstagramDialog = false },
-            onOpen = { username ->
-                showInstagramDialog = false
-                openInstagram(context, username)
-            }
-        )
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 22.dp, vertical = 24.dp)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp, vertical = 24.dp)
         ) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "chand",
+                    fontFamily = ChandFont,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            // Keep only the first three useful information sections from the earlier screen.
             Text(
-                "chand",
+                "تاریخ شمسی و قیمت دلار، ساده و همیشه در دسترس.",
+                modifier = Modifier.padding(top = 6.dp, bottom = 16.dp),
                 fontFamily = ChandFont,
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            PreviewCard(
+                title = "تاریخ شمسی",
+                body = "${date.dayOfWeek}  •  ${PersianNumbers.digits(date.day)} ${date.monthName} ${PersianNumbers.digits(date.year)}"
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            PreviewCard(
+                title = "دلار آمریکا",
+                body = cachedRate?.let { "${PersianNumbers.grouped(it.priceToman)} تومان" }
+                    ?: "در حال دریافت آخرین قیمت..."
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            Text(
+                "درباره من",
+                fontFamily = ChandFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                PromoButton(
+                    title = PromoSecrets.instagramTitle,
+                    symbol = "◎",
+                    colors = listOf(
+                        Color(0xFF6D28D9),
+                        Color(0xFFD946EF),
+                        Color(0xFFF97316)
+                    ),
+                    onClick = { showInstagramPanel = true }
+                )
+
+                PromoButton(
+                    title = PromoSecrets.developerTitle,
+                    symbol = "➤",
+                    colors = listOf(
+                        Color(0xFF0284C7),
+                        Color(0xFF2563EB)
+                    ),
+                    onClick = { openTelegram(context, PromoSecrets.telegramUser) }
+                )
+            }
+
+            Spacer(Modifier.height(18.dp))
         }
 
-        Spacer(Modifier.weight(1f))
-
-        Text(
-            "درباره من",
-            fontFamily = ChandFont,
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            PromoButton(
-                title = PromoSecrets.instagramTitle,
-                symbol = "◎",
-                colors = listOf(
-                    Color(0xFF6D28D9),
-                    Color(0xFFD946EF),
-                    Color(0xFFF97316)
-                ),
-                onClick = { showInstagramDialog = true }
+        if (showInstagramPanel) {
+            InstagramAccountsOverlay(
+                onDismiss = { showInstagramPanel = false },
+                onOpen = { username ->
+                    showInstagramPanel = false
+                    openInstagram(context, username)
+                }
             )
+        }
+    }
+}
 
-            PromoButton(
-                title = PromoSecrets.developerTitle,
-                symbol = "➤",
-                colors = listOf(
-                    Color(0xFF0284C7),
-                    Color(0xFF2563EB)
-                ),
-                onClick = { openTelegram(context, PromoSecrets.telegramUser) }
+@Composable
+private fun PreviewCard(title: String, body: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Text(
+                title,
+                fontFamily = ChandFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp
+            )
+            Text(
+                body,
+                fontFamily = ChandFont,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -206,13 +274,23 @@ private fun PromoButton(
     }
 }
 
+/**
+ * In-content overlay instead of a platform Dialog. Because it is part of the already-RTL
+ * Compose hierarchy, there is no first-frame LTR flash on MIUI before the panel settles.
+ */
 @Composable
-private fun InstagramAccountsDialog(
+private fun InstagramAccountsOverlay(
     onDismiss: () -> Unit,
     onOpen: (String) -> Unit
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.38f))
+                .padding(horizontal = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(30.dp),
