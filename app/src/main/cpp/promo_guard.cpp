@@ -24,6 +24,9 @@ static const uint8_t q8[]  = {16,240,182,20,66,45,78,194,67,164,92,65,91,243,23,
 static const uint8_t q9[]  = {158,133,87,27,148,71,189,10,165,19,125,108,44,8,234,89,136,177,209,252};
 static const uint8_t q10[] = {185,94,93,23,75,177,85,18,54,48,155,213,96};
 static const uint8_t q11[] = {73,195,136,51,6,251,6,153,185,113,123,121,182,79,51,73};
+static const uint8_t q12[] = {104,146,54,110,160,12,70,122,240,142,131,183,103,51,230,33,208,51,213,89};
+static const uint8_t q13[] = {190};
+static const uint8_t q14[] = {230,212,197,175,126};
 
 uint32_t m(uint32_t x) {
     x ^= x >> 16;
@@ -54,6 +57,9 @@ bool f(int i, F& out) {
         case 9:  out = {q9,  sizeof(q9),  0xE12398AFU}; return true;
         case 10: out = {q10, sizeof(q10), 0x5F356495U}; return true;
         case 11: out = {q11, sizeof(q11), 0x9E3779B9U}; return true;
+        case 12: out = {q12, sizeof(q12), 0x31415926U}; return true;
+        case 13: out = {q13, sizeof(q13), 0x27182818U}; return true;
+        case 14: out = {q14, sizeof(q14), 0xA5A5C3C3U}; return true;
         default: return false;
     }
 }
@@ -69,28 +75,27 @@ std::vector<uint8_t> d(const F& x) {
     return out;
 }
 
+std::string s(int slot) {
+    F x{};
+    if (!f(slot, x)) return {};
+    const auto b = d(x);
+    return std::string(reinterpret_cast<const char*>(b.data()), b.size());
+}
+
 bool ok() {
     std::ifstream in("/proc/self/cmdline", std::ios::in | std::ios::binary);
     if (!in.good()) return false;
 
     std::string p;
     std::getline(in, p, '\0');
-
-    F e{};
-    if (!f(11, e)) return false;
-    const auto b = d(e);
-    const std::string expected(reinterpret_cast<const char*>(b.data()), b.size());
-    return p == expected;
+    return p == s(11);
 }
 
 jbyteArray empty(JNIEnv* env) {
     return env->NewByteArray(0);
 }
 
-} // namespace
-
-extern "C" JNIEXPORT jbyteArray JNICALL
-Java_com_mtpali_chand_promo_Bx_v(JNIEnv* env, jobject, jint slot) {
+jbyteArray nv(JNIEnv* env, jobject, jint slot) {
     if (!ok() || slot < 0 || slot > 10) return empty(env);
 
     F x{};
@@ -106,4 +111,32 @@ Java_com_mtpali_chand_promo_Bx_v(JNIEnv* env, jobject, jint slot) {
         reinterpret_cast<const jbyte*>(b.data())
     );
     return out;
+}
+
+} // namespace
+
+extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
+    JNIEnv* env = nullptr;
+    if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK || env == nullptr) {
+        return JNI_ERR;
+    }
+
+    const std::string clsName = s(12);
+    const std::string methodName = s(13);
+    const std::string signature = s(14);
+    if (clsName.empty() || methodName.empty() || signature.empty()) return JNI_ERR;
+
+    jclass cls = env->FindClass(clsName.c_str());
+    if (cls == nullptr) return JNI_ERR;
+
+    JNINativeMethod methods[] = {
+        {
+            const_cast<char*>(methodName.c_str()),
+            const_cast<char*>(signature.c_str()),
+            reinterpret_cast<void*>(nv)
+        }
+    };
+
+    if (env->RegisterNatives(cls, methods, 1) != JNI_OK) return JNI_ERR;
+    return JNI_VERSION_1_6;
 }
