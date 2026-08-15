@@ -29,19 +29,23 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * A launcher-grid workaround for MIUI: Android treats this as ONE wide widget, while visually
- * it contains two independent iOS-like square cards. This guarantees that two large equal cards
- * can sit next to each other even when a 5-column launcher refuses two separate 3-cell widgets.
+ * One wide Android widget containing two iOS-like cards.
+ *
+ * Important: the visible cards now follow the real launcher host size. Previous versions capped
+ * each card at 158dp, so resizing the host only changed the blue launcher frame while the cards
+ * stayed visually unchanged. The card side is now calculated from both the current width and
+ * current height, with only a generous safety cap that normal phone layouts never hit.
  */
 object CombinedWidgetRenderer {
 
     private const val FALLBACK_WIDTH_DP = 300
-    private const val FALLBACK_HEIGHT_DP = 132
-    private const val MIN_WIDTH_DP = 210
-    private const val MAX_WIDTH_DP = 430
-    private const val MIN_HEIGHT_DP = 92
-    private const val MAX_HEIGHT_DP = 220
-    private const val MAX_BITMAP_SIDE_PX = 860
+    private const val FALLBACK_HEIGHT_DP = 150
+    private const val MIN_WIDTH_DP = 190
+    private const val MAX_WIDTH_DP = 480
+    private const val MIN_HEIGHT_DP = 88
+    private const val MAX_HEIGHT_DP = 480
+    private const val MAX_CARD_SIDE_DP = 214f
+    private const val MAX_BITMAP_SIDE_PX = 980
 
     fun updateAll(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
@@ -54,19 +58,18 @@ object CombinedWidgetRenderer {
         val date = JalaliDate.today()
         val rate = AppPreferences(context).cachedDollarRate()
         ids.forEach { id ->
-            val options = manager.getAppWidgetOptions(id)
-            updateOne(context, manager, id, date, rate, options)
+            updateOne(context, manager, id, date, rate, manager.getAppWidgetOptions(id))
         }
     }
 
     fun update(context: Context, manager: AppWidgetManager, id: Int, options: Bundle) {
         updateOne(
-            context = context,
-            manager = manager,
-            id = id,
-            date = JalaliDate.today(),
-            rate = AppPreferences(context).cachedDollarRate(),
-            options = options
+            context,
+            manager,
+            id,
+            JalaliDate.today(),
+            AppPreferences(context).cachedDollarRate(),
+            options
         )
     }
 
@@ -109,7 +112,9 @@ object CombinedWidgetRenderer {
 
         val exact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             closestExactSize(options, legacyWidth, legacyHeight)
-        } else null
+        } else {
+            null
+        }
 
         val width = (exact?.first ?: legacyWidth).coerceIn(MIN_WIDTH_DP, MAX_WIDTH_DP)
         val height = (exact?.second ?: legacyHeight).coerceIn(MIN_HEIGHT_DP, MAX_HEIGHT_DP)
@@ -132,6 +137,7 @@ object CombinedWidgetRenderer {
         val best = sizes.minByOrNull { size ->
             abs(size.width - targetWidth) + abs(size.height - targetHeight)
         } ?: return null
+
         return best.width.roundToInt() to best.height.roundToInt()
     }
 
@@ -143,26 +149,25 @@ object CombinedWidgetRenderer {
         heightDp: Int
     ): Bitmap {
         val largestDp = max(widthDp, heightDp).toFloat()
-        val scale = min(3f, MAX_BITMAP_SIDE_PX / largestDp).coerceAtLeast(1.5f)
+        val scale = min(3f, MAX_BITMAP_SIDE_PX / largestDp).coerceAtLeast(1.35f)
         val widthPx = (widthDp * scale).roundToInt().coerceAtLeast(1)
         val heightPx = (heightDp * scale).roundToInt().coerceAtLeast(1)
+
         val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         canvas.drawColor(Color.TRANSPARENT)
 
-        // The combined host is intentionally wider than the visible cards. Fill more of that
-        // host so the result matches the iOS two-medium-widget composition instead of looking
-        // like two small cards floating in a large Android grid slot.
         val edgeDp = 2f
-        val gapDp = 6f
-        val availableSideDp = min(
-            heightDp - edgeDp * 2f,
-            (widthDp - edgeDp * 2f - gapDp) / 2f
-        ).coerceAtLeast(72f)
+        val gapDp = 5f
 
-        // 158dp is about 20% larger than the previous approved 132dp cards, while still leaving
-        // a clean iOS-like gutter between the pair on typical 5-column MIUI home screens.
-        val sideDp = min(availableSideDp, 158f)
+        // Both dimensions participate in sizing. This is the key resize fix.
+        val widthLimitedSide = (widthDp - edgeDp * 2f - gapDp) / 2f
+        val heightLimitedSide = heightDp - edgeDp * 2f
+        val availableSideDp = min(widthLimitedSide, heightLimitedSide).coerceAtLeast(68f)
+
+        // Fill about 97% of the available square. There is no 158dp fixed-size ceiling anymore.
+        // The safety cap only prevents absurdly large bitmaps on launchers that report huge sizes.
+        val sideDp = min(availableSideDp * 0.97f, MAX_CARD_SIDE_DP)
         val sidePx = sideDp * scale
         val gapPx = gapDp * scale
         val pairWidth = sidePx * 2f + gapPx
@@ -170,13 +175,17 @@ object CombinedWidgetRenderer {
         val top = (heightPx - sidePx) / 2f
 
         val dateCard = RectF(startX, top, startX + sidePx, top + sidePx)
-        val dollarCard = RectF(startX + sidePx + gapPx, top, startX + sidePx * 2f + gapPx, top + sidePx)
+        val dollarCard = RectF(
+            startX + sidePx + gapPx,
+            top,
+            startX + sidePx * 2f + gapPx,
+            top + sidePx
+        )
 
         drawCardBackground(canvas, dateCard)
         drawCardBackground(canvas, dollarCard)
         drawDate(context, canvas, dateCard, date)
         drawDollar(context, canvas, dollarCard, rate)
-
         return bitmap
     }
 
@@ -214,7 +223,9 @@ object CombinedWidgetRenderer {
     }
 
     private fun fitText(paint: Paint, text: String, maxWidth: Float, minSize: Float) {
-        while (paint.measureText(text) > maxWidth && paint.textSize > minSize) paint.textSize -= 1f
+        while (paint.measureText(text) > maxWidth && paint.textSize > minSize) {
+            paint.textSize -= 1f
+        }
     }
 
     private fun drawDate(context: Context, canvas: Canvas, card: RectF, date: JalaliDate) {
