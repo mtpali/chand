@@ -1,6 +1,7 @@
 package com.mtpali.chand.work
 
 import android.content.Context
+import android.os.Process
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
@@ -9,6 +10,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.mtpali.chand.security.IntegrityGuard
 import java.util.concurrent.TimeUnit
 
 object PriceUpdateScheduler {
@@ -18,7 +20,14 @@ object PriceUpdateScheduler {
     private const val HOURLY_PERIODIC_NAME = "chand-dollar-hourly-v1"
     private const val IMMEDIATE_NAME = "chand-dollar-immediate"
 
+    private fun allowed(context: Context): Boolean {
+        if (IntegrityGuard.verify(context.applicationContext)) return true
+        Process.killProcess(Process.myPid())
+        return false
+    }
+
     fun schedule(context: Context) {
+        if (!allowed(context)) return
         runCatching {
             val manager = WorkManager.getInstance(context.applicationContext)
             manager.cancelUniqueWork(LEGACY_PERIODIC_NAME)
@@ -40,6 +49,7 @@ object PriceUpdateScheduler {
     }
 
     fun enqueueNow(context: Context) {
+        if (!allowed(context)) return
         runCatching {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
