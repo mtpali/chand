@@ -1,0 +1,118 @@
+name: One-time namespace refactor
+
+on:
+  push:
+    branches:
+      - agent/fix-samsung-combined-widget-scaling
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Refactor full source namespace
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shutil
+
+          old_dot = "com.mtpali.chand"
+          new_dot = "com.chand.mobiletina"
+          old_slash = "com/mtpali/chand"
+          new_slash = "com/chand/mobiletina"
+
+          root = Path('.')
+          skip_parts = {'.git', '.gradle', 'build'}
+          text_suffixes = {'.kt', '.kts', '.pro', '.xml', '.md', '.cpp', '.h', '.txt', '.yml', '.yaml'}
+
+          for path in root.rglob('*'):
+              if not path.is_file() or any(part in skip_parts for part in path.parts):
+                  continue
+              if path.suffix.lower() not in text_suffixes and path.name not in {'README', 'LICENSE'}:
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  continue
+              updated = text.replace(old_dot, new_dot).replace(old_slash, new_slash)
+              if path.as_posix() == 'app/build.gradle.kts':
+                  updated = updated.replace('versionCode = 23', 'versionCode = 24')
+                  updated = updated.replace('versionName = "1.6.2"', 'versionName = "1.6.3"')
+              if path.as_posix() == 'README.md':
+                  updated = updated.replace('Version: `1.6.2` (`versionCode 23`)', 'Version: `1.6.3` (`versionCode 24`)')
+              if updated != text:
+                  path.write_text(updated, encoding='utf-8')
+
+          main_old = Path('app/src/main/java/com/mtpali/chand')
+          main_new = Path('app/src/main/java/com/chand/mobiletina')
+          main_new.parent.mkdir(parents=True, exist_ok=True)
+          if main_old.exists():
+              if main_new.exists():
+                  shutil.rmtree(main_new)
+              shutil.move(str(main_old), str(main_new))
+
+          test_old = Path('app/src/test/java/com/mtpali/chand')
+          test_new = Path('app/src/test/java/com/chand/mobiletina')
+          test_new.parent.mkdir(parents=True, exist_ok=True)
+          if test_old.exists():
+              if test_new.exists():
+                  shutil.rmtree(test_new)
+              shutil.move(str(test_old), str(test_new))
+
+          for stale in [Path('app/src/main/java/com/mtpali'), Path('app/src/test/java/com/mtpali')]:
+              if stale.exists():
+                  try:
+                      stale.rmdir()
+                  except OSError:
+                      pass
+
+          cpp = Path('app/src/main/cpp/promo_guard.cpp')
+          cpp_text = cpp.read_text(encoding='utf-8')
+          q12 = 'static const uint8_t q12[] = {104,146,54,110,167,248,53,115,241,255,159,119,199,35,214,41,170,53,148,90,80,134,165,143};'
+          cpp_text, count = re.subn(r'static const uint8_t q12\[\]\s*=\s*\{[^}]+\};', q12, cpp_text, count=1)
+          if count != 1:
+              raise SystemExit('Unable to replace encrypted JNI class path q12')
+          cpp.write_text(cpp_text, encoding='utf-8')
+
+          leftovers = []
+          for path in root.rglob('*'):
+              if not path.is_file() or any(part in skip_parts for part in path.parts):
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except (UnicodeDecodeError, OSError):
+                  continue
+              if old_dot in text or old_slash in text:
+                  leftovers.append(str(path))
+          if leftovers:
+              raise SystemExit('Old namespace still present in: ' + ', '.join(leftovers))
+
+          stale_paths = [p for p in root.rglob('*') if 'mtpali' in p.parts and (p.is_file() or p.is_dir())]
+          if stale_paths:
+              raise SystemExit('Old package path still present: ' + ', '.join(map(str, stale_paths)))
+
+          expected = main_new / 'k/Q.kt'
+          if not expected.exists():
+              raise SystemExit('Moved JNI bridge Q.kt not found')
+          PY
+
+      - name: Commit namespace migration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "refactor: migrate full package namespace to com.chand.mobiletina"
+          git push origin HEAD:${{ github.ref_name }}
