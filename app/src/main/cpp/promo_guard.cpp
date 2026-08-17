@@ -1,5 +1,8 @@
 #include <jni.h>
+#include <algorithm>
+#include <cctype>
 #include <cstdint>
+#include <cstdlib>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -27,6 +30,15 @@ static const uint8_t q11[] = {73,195,136,51,6,251,6,153,185,113,123,121,182,79,5
 static const uint8_t q12[] = {104,146,54,110,160,12,70,122,240,142,131,183,103,51,230,33,208,51,213,89};
 static const uint8_t q13[] = {190};
 static const uint8_t q14[] = {230,212,197,175,126};
+static const uint8_t q15[] = {162};
+static const uint8_t q16[] = {91,73,32};
+static const uint8_t q17[] = {202,183,27,130,76};
+static const uint8_t q18[] = {46,5,187,154,138,1};
+static const uint8_t q19[] = {89,218,192,39,133,184,157};
+static const uint8_t q20[] = {206,193,126,101,41,11,121,81,139};
+static const uint8_t q21[] = {248,202,35,209,217,164};
+static const uint8_t q22[] = {163,63,221,224};
+static const uint8_t q23[] = {232,169,67,198,6,78,104,252,80,39,186};
 
 uint32_t m(uint32_t x) {
     x ^= x >> 16;
@@ -60,6 +72,15 @@ bool f(int i, F& out) {
         case 12: out = {q12, sizeof(q12), 0x31415926U}; return true;
         case 13: out = {q13, sizeof(q13), 0x27182818U}; return true;
         case 14: out = {q14, sizeof(q14), 0xA5A5C3C3U}; return true;
+        case 15: out = {q15, sizeof(q15), 0x6A09E667U}; return true;
+        case 16: out = {q16, sizeof(q16), 0xBB67AE85U}; return true;
+        case 17: out = {q17, sizeof(q17), 0x3C6EF372U}; return true;
+        case 18: out = {q18, sizeof(q18), 0xA54FF53AU}; return true;
+        case 19: out = {q19, sizeof(q19), 0x510E527FU}; return true;
+        case 20: out = {q20, sizeof(q20), 0x9B05688CU}; return true;
+        case 21: out = {q21, sizeof(q21), 0x1F83D9ABU}; return true;
+        case 22: out = {q22, sizeof(q22), 0x5BE0CD19U}; return true;
+        case 23: out = {q23, sizeof(q23), 0xC1059ED8U}; return true;
         default: return false;
     }
 }
@@ -91,6 +112,49 @@ bool ok() {
     return p == s(11);
 }
 
+bool traced() {
+    std::ifstream in("/proc/self/status");
+    if (!in.good()) return true;
+
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.rfind("TracerPid:", 0) == 0) {
+            const char* start = line.c_str() + 10;
+            return std::strtol(start, nullptr, 10) > 0;
+        }
+    }
+    return true;
+}
+
+bool hooked() {
+    const char* preload = std::getenv("LD_PRELOAD");
+    if (preload != nullptr && *preload != '\0') return true;
+
+    std::ifstream in("/proc/self/maps");
+    if (!in.good()) return true;
+
+    std::vector<std::string> needles;
+    needles.reserve(7);
+    for (int slot = 17; slot <= 23; ++slot) {
+        auto value = s(slot);
+        if (!value.empty()) needles.emplace_back(std::move(value));
+    }
+
+    std::string line;
+    while (std::getline(in, line)) {
+        std::transform(
+            line.begin(),
+            line.end(),
+            line.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); }
+        );
+        for (const auto& needle : needles) {
+            if (line.find(needle) != std::string::npos) return true;
+        }
+    }
+    return false;
+}
+
 jbyteArray empty(JNIEnv* env) {
     return env->NewByteArray(0);
 }
@@ -113,6 +177,14 @@ jbyteArray nv(JNIEnv* env, jobject, jint slot) {
     return out;
 }
 
+jint ng(JNIEnv*, jobject) {
+    jint flags = 0;
+    if (!ok()) flags |= 1;
+    if (traced()) flags |= 2;
+    if (hooked()) flags |= 4;
+    return flags;
+}
+
 } // namespace
 
 extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
@@ -124,7 +196,14 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
     const std::string clsName = s(12);
     const std::string methodName = s(13);
     const std::string signature = s(14);
-    if (clsName.empty() || methodName.empty() || signature.empty()) return JNI_ERR;
+    const std::string guardName = s(15);
+    const std::string guardSignature = s(16);
+    if (
+        clsName.empty() || methodName.empty() || signature.empty() ||
+        guardName.empty() || guardSignature.empty()
+    ) {
+        return JNI_ERR;
+    }
 
     jclass cls = env->FindClass(clsName.c_str());
     if (cls == nullptr) return JNI_ERR;
@@ -134,9 +213,14 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
             const_cast<char*>(methodName.c_str()),
             const_cast<char*>(signature.c_str()),
             reinterpret_cast<void*>(nv)
+        },
+        {
+            const_cast<char*>(guardName.c_str()),
+            const_cast<char*>(guardSignature.c_str()),
+            reinterpret_cast<void*>(ng)
         }
     };
 
-    if (env->RegisterNatives(cls, methods, 1) != JNI_OK) return JNI_ERR;
+    if (env->RegisterNatives(cls, methods, 2) != JNI_OK) return JNI_ERR;
     return JNI_VERSION_1_6;
 }
