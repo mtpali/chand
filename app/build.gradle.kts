@@ -1,4 +1,8 @@
+import java.io.File
+import java.io.FileInputStream
 import java.net.URI
+import java.security.KeyStore
+import java.security.MessageDigest
 
 plugins {
     id("com.android.application")
@@ -33,17 +37,66 @@ tasks.matching { it.name == "preBuild" }.configureEach {
     dependsOn(downloadWidgetFonts)
 }
 
+fun certificateSha256(store: File, password: String, alias: String): String {
+    val keyStore = KeyStore.getInstance("PKCS12")
+    FileInputStream(store).use { input ->
+        keyStore.load(input, password.toCharArray())
+    }
+    val certificate = keyStore.getCertificate(alias)
+        ?: error("Signing certificate was not found for alias $alias")
+    return MessageDigest.getInstance("SHA-256")
+        .digest(certificate.encoded)
+        .joinToString(separator = "") { byte -> "%02X".format(byte) }
+}
+
+// Hardened APKs use a dedicated signing identity and compile that certificate digest into
+// the binary. Re-signing a modified APK invalidates the runtime certificate lock.
+// For public distribution, replace this local/generated identity with a persistent private
+// release key kept outside the repository or use Play App Signing.
+val hardenedAlias = "chand_hardened"
+val hardenedPassword = "chand-ci-hardened-963"
+val hardenedStore = rootProject.layout.projectDirectory
+    .file(".gradle/chand-secure/chand-hardened.p12")
+    .asFile
+if (!hardenedStore.exists()) {
+    hardenedStore.parentFile.mkdirs()
+    val keytool = File(System.getProperty("java.home"), "bin/keytool").absolutePath
+    val process = ProcessBuilder(
+        keytool,
+        "-genkeypair",
+        "-noprompt",
+        "-alias", hardenedAlias,
+        "-keyalg", "RSA",
+        "-keysize", "3072",
+        "-sigalg", "SHA256withRSA",
+        "-validity", "3650",
+        "-dname", "CN=chand hardened,O=mobiletina,C=IR",
+        "-storetype", "PKCS12",
+        "-keystore", hardenedStore.absolutePath,
+        "-storepass", hardenedPassword,
+        "-keypass", hardenedPassword
+    )
+        .redirectErrorStream(true)
+        .start()
+    val output = process.inputStream.bufferedReader().readText()
+    check(process.waitFor() == 0) { "Unable to create hardened signing key: $output" }
+}
+val hardenedCertSha256 = certificateSha256(hardenedStore, hardenedPassword, hardenedAlias)
+
 android {
-    namespace = "com.mtpali.chand"
+    namespace = "com.chand.mobiletina"
     compileSdk = 36
     ndkVersion = "27.2.12479018"
 
     defaultConfig {
-        applicationId = "com.mtpali.chand"
+        applicationId = "com.chand.mobiletina"
         minSdk = 26
         targetSdk = 36
-        versionCode = 21
-        versionName = "1.6.0"
+        versionCode = 24
+        versionName = "1.6.3"
+
+        buildConfigField("boolean", "SECURE_RUNTIME", "false")
+        buildConfigField("String", "CERT_LOCK_SHA256", "\"\"")
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
@@ -62,26 +115,36 @@ android {
         }
     }
 
+    signingConfigs {
+        create("hardenedCi") {
+            storeFile = hardenedStore
+            storePassword = hardenedPassword
+            keyAlias = hardenedAlias
+            keyPassword = hardenedPassword
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             isDebuggable = false
+            isJniDebuggable = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
 
-        // Installable CI artifact with the same R8/resource hardening as release.
-        // For public distribution, replace the debug signing config with a private persistent
-        // release key stored only in GitHub Secrets / Play App Signing.
         create("hardened") {
             initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("hardenedCi")
             isMinifyEnabled = true
             isShrinkResources = true
             isDebuggable = false
+            isJniDebuggable = false
+            buildConfigField("boolean", "SECURE_RUNTIME", "true")
+            buildConfigField("String", "CERT_LOCK_SHA256", "\"$hardenedCertSha256\"")
             matchingFallbacks += listOf("release")
         }
     }

@@ -1,49 +1,22 @@
-# chand — ویجت تاریخ شمسی و قیمت دلار برای اندروید
+# chand
 
-یک اپ اندروید مینیمال با طراحی نزدیک به ویجت‌های iOS.
+An Android home-screen widget app for Persian date and USD/Toman display.
 
-## ویجت‌ها
+## Current hardened build
 
-- **تاریخ شمسی** — روز هفته، روز ماه، ماه و سال؛ کاملاً آفلاین.
-- **قیمت دلار** — قیمت دلار آمریکا به تومان، تغییر نسبت به نرخ قبلی و بروزرسانی با لمس.
-- **تاریخ و دلار - iOS** — یک ویجت عریض که دو کارت مساوی را کنار هم نمایش می‌دهد تا محدودیت Grid بعضی لانچرها مثل MIUI مانع چیدمان مشابه iOS نشود.
+- Android application ID: `com.chand.mobiletina`
+- Source namespace: `com.chand.mobiletina`
+- Main and test source trees are fully migrated to `com/chand/mobiletina`.
+- Version: `1.6.3` (`versionCode 24`)
+- R8 minification/resource shrinking enabled for hardened/release builds.
+- Native JNI bridge uses dynamic registration and hidden symbols.
+- Hardened builds enforce runtime signing-certificate integrity and native anti-debug/hook checks.
+- Combined widget uses host-aware sizing and `fitCenter` rendering for Samsung One UI while retaining the MIUI resize path.
 
-## بروزرسانی قیمت
+## CI
 
-- منبع فعلی قیمت، صفحه عمومی AlanChand است.
-- WorkManager تقریباً هر یک ساعت درخواست بروزرسانی می‌دهد؛ زمان دقیق اجرا تحت کنترل Android است.
-- باز کردن برنامه یا لمس ویجت دلار/ویجت ترکیبی، درخواست بروزرسانی فوری ایجاد می‌کند.
-- آخرین نرخ موفق در SharedPreferences نگه‌داری می‌شود تا در قطعی اینترنت ویجت خالی نشود.
+GitHub Actions runs unit tests, lint and `assembleHardened` and publishes the hardened APK artifact.
 
-## فناوری‌ها
+## Release signing
 
-- Kotlin
-- Jetpack Compose + Material 3
-- Native Android App Widgets / RemoteViews
-- Canvas bitmap rendering برای سازگاری بهتر با MIUI
-- WorkManager
-- C++/JNI برای سخت‌تر کردن دستکاری بخش هویت تبلیغاتی
-- R8 + resource shrinking برای build سخت‌شده
-- minSdk 26 / targetSdk 36
-
-## ساخت
-
-برای توسعه:
-
-```bash
-gradle :app:testDebugUnitTest :app:assembleDebug
-```
-
-برای build سخت‌شده و قابل نصب در محیط CI:
-
-```bash
-gradle :app:assembleHardened
-```
-
-GitHub Actions تست، lint و build سخت‌شده را اجرا می‌کند و artifact با نام `chand-hardened-apk` تولید می‌شود.
-
-> برای انتشار عمومی واقعی، APK/AAB باید با یک کلید خصوصی و ثابت release امضا شود که فقط در GitHub Secrets یا Play App Signing نگه‌داری می‌شود. کلید خصوصی نباید داخل این repository قرار گیرد.
-
-## حقوق استفاده
-
-این پروژه تحت مجوز اختصاصی موجود در فایل `LICENSE` است. عمومی بودن repository به معنی اجازه کپی، بازنشر، تغییر نام یا rebrand کردن برنامه نیست.
+The installable CI hardened artifact uses a local/generated signing identity whose certificate digest is compiled into that artifact. For long-term public updates, replace it with a persistent private release key stored outside the repository (for example GitHub Secrets or Play App Signing) and retain that key permanently.
