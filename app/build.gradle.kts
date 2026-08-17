@@ -84,16 +84,18 @@ if (!hardenedStore.exists()) {
 val hardenedCertSha256 = certificateSha256(hardenedStore, hardenedPassword, hardenedAlias)
 
 android {
+    // Keep the source namespace stable so JNI/Manifest component names remain compatible.
+    // The installed Android package/application ID is intentionally branded separately.
     namespace = "com.mtpali.chand"
     compileSdk = 36
     ndkVersion = "27.2.12479018"
 
     defaultConfig {
-        applicationId = "com.mtpali.chand"
+        applicationId = "com.chand.mobiletina"
         minSdk = 26
         targetSdk = 36
-        versionCode = 22
-        versionName = "1.6.1"
+        versionCode = 23
+        versionName = "1.6.2"
 
         buildConfigField("boolean", "SECURE_RUNTIME", "false")
         buildConfigField("String", "CERT_LOCK_SHA256", "\"\"")
