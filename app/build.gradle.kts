@@ -55,7 +55,9 @@ fun certificateSha256(store: File, password: String, alias: String): String {
 // with a persistent private release key from GitHub Secrets / Play App Signing.
 val hardenedAlias = "chand_hardened"
 val hardenedPassword = "chand-ci-hardened-963"
-val hardenedStore = layout.buildDirectory.file("secure-signing/chand-hardened.p12").get().asFile
+val hardenedStore = rootProject.layout.projectDirectory
+    .file(".gradle/chand-secure/chand-hardened.p12")
+    .asFile
 if (!hardenedStore.exists()) {
     hardenedStore.parentFile.mkdirs()
     val keytool = File(System.getProperty("java.home"), "bin/keytool").absolutePath
