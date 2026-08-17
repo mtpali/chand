@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.mtpali.chand.data.DollarRepository
+import com.mtpali.chand.security.IntegrityGuard
 import com.mtpali.chand.widget.WidgetRenderer
 import com.mtpali.chand.widget.combined.CombinedWidgetRenderer
 
@@ -13,6 +14,8 @@ class PriceUpdateWorker(
 ) : Worker(appContext, params) {
 
     override fun doWork(): Result {
+        if (!IntegrityGuard.verify(applicationContext)) return Result.failure()
+
         return runCatching {
             DollarRepository(applicationContext).refresh()
             WidgetRenderer.updateDollarAll(applicationContext)
