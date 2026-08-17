@@ -1,11 +1,11 @@
 # Keep only the neutral JNI bridge required for dynamic native registration.
--keep,allowoptimization class com.mtpali.chand.k.Q {
+-keep,allowoptimization class com.chand.mobiletina.k.Q {
     native <methods>;
 }
 
 # Android/WorkManager instantiate these components outside normal direct call paths.
--keep class com.mtpali.chand.widget.** extends android.appwidget.AppWidgetProvider { *; }
--keep class com.mtpali.chand.work.PriceUpdateWorker {
+-keep class com.chand.mobiletina.widget.** extends android.appwidget.AppWidgetProvider { *; }
+-keep class com.chand.mobiletina.work.PriceUpdateWorker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
 

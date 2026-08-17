@@ -49,10 +49,10 @@ fun certificateSha256(store: File, password: String, alias: String): String {
         .joinToString(separator = "") { byte -> "%02X".format(byte) }
 }
 
-// CI/test hardened APKs get a fresh signing identity during configuration. The matching
-// certificate digest is compiled into that exact APK. Re-signing a modified APK therefore
-// invalidates the runtime certificate lock. For a public release, replace this generated key
-// with a persistent private release key from GitHub Secrets / Play App Signing.
+// Hardened APKs use a dedicated signing identity and compile that certificate digest into
+// the binary. Re-signing a modified APK invalidates the runtime certificate lock.
+// For public distribution, replace this local/generated identity with a persistent private
+// release key kept outside the repository or use Play App Signing.
 val hardenedAlias = "chand_hardened"
 val hardenedPassword = "chand-ci-hardened-963"
 val hardenedStore = rootProject.layout.projectDirectory
@@ -70,7 +70,7 @@ if (!hardenedStore.exists()) {
         "-keysize", "3072",
         "-sigalg", "SHA256withRSA",
         "-validity", "3650",
-        "-dname", "CN=chand hardened,O=mtpali,C=IR",
+        "-dname", "CN=chand hardened,O=mobiletina,C=IR",
         "-storetype", "PKCS12",
         "-keystore", hardenedStore.absolutePath,
         "-storepass", hardenedPassword,
@@ -84,9 +84,7 @@ if (!hardenedStore.exists()) {
 val hardenedCertSha256 = certificateSha256(hardenedStore, hardenedPassword, hardenedAlias)
 
 android {
-    // Keep the source namespace stable so JNI/Manifest component names remain compatible.
-    // The installed Android package/application ID is intentionally branded separately.
-    namespace = "com.mtpali.chand"
+    namespace = "com.chand.mobiletina"
     compileSdk = 36
     ndkVersion = "27.2.12479018"
 
@@ -94,8 +92,8 @@ android {
         applicationId = "com.chand.mobiletina"
         minSdk = 26
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.6.2"
+        versionCode = 24
+        versionName = "1.6.3"
 
         buildConfigField("boolean", "SECURE_RUNTIME", "false")
         buildConfigField("String", "CERT_LOCK_SHA256", "\"\"")
@@ -138,8 +136,6 @@ android {
             )
         }
 
-        // Installable anti-tamper CI artifact. It is certificate-locked to the key generated
-        // above, so a binary edit + re-sign cycle no longer produces a normally runnable app.
         create("hardened") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("hardenedCi")

@@ -5,8 +5,9 @@ An Android home-screen widget app for Persian date and USD/Toman display.
 ## Current hardened build
 
 - Android application ID: `com.chand.mobiletina`
-- Source namespace remains `com.mtpali.chand` intentionally to preserve stable internal JNI/component wiring while R8 repackages non-entrypoint implementation classes.
-- Version: `1.6.2` (`versionCode 23`)
+- Source namespace: `com.chand.mobiletina`
+- Main and test source trees are fully migrated to `com/chand/mobiletina`.
+- Version: `1.6.3` (`versionCode 24`)
 - R8 minification/resource shrinking enabled for hardened/release builds.
 - Native JNI bridge uses dynamic registration and hidden symbols.
 - Hardened builds enforce runtime signing-certificate integrity and native anti-debug/hook checks.
