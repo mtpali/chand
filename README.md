@@ -1,49 +1,25 @@
-# chand — ویجت تاریخ شمسی و قیمت دلار برای اندروید
+# chand
 
-یک اپ اندروید مینیمال با طراحی نزدیک به ویجت‌های iOS.
+Android app focused on iOS-like home-screen widgets for Persian date and USD price.
 
-## ویجت‌ها
+## Widgets
+- Persian date widget
+- USD widget
+- Combined iOS-style date + USD widget
 
-- **تاریخ شمسی** — روز هفته، روز ماه، ماه و سال؛ کاملاً آفلاین.
-- **قیمت دلار** — قیمت دلار آمریکا به تومان، تغییر نسبت به نرخ قبلی و بروزرسانی با لمس.
-- **تاریخ و دلار - iOS** — یک ویجت عریض که دو کارت مساوی را کنار هم نمایش می‌دهد تا محدودیت Grid بعضی لانچرها مثل MIUI مانع چیدمان مشابه iOS نشود.
+The widgets are rendered to Bitmap and displayed through a simple RemoteViews ImageView for better compatibility with MIUI and other vendor launchers.
 
-## بروزرسانی قیمت
+## Current hardened build
+The `hardened` build type enables R8/resource shrinking, non-debuggable native code, certificate locking, and distributed runtime integrity checks. The runtime guard validates the installed signing certificate, package identity and debugger state, while the native vault also checks process identity and common hook/instrumentation traces.
 
-- منبع فعلی قیمت، صفحه عمومی AlanChand است.
-- WorkManager تقریباً هر یک ساعت درخواست بروزرسانی می‌دهد؛ زمان دقیق اجرا تحت کنترل Android است.
-- باز کردن برنامه یا لمس ویجت دلار/ویجت ترکیبی، درخواست بروزرسانی فوری ایجاد می‌کند.
-- آخرین نرخ موفق در SharedPreferences نگه‌داری می‌شود تا در قطعی اینترنت ویجت خالی نشود.
+The hardened CI signing identity is generated locally and stored only under the ignored `.gradle/chand-secure/` directory. Re-signing a modified APK with another certificate invalidates the runtime certificate lock. For long-term public distribution, use a persistent private release key stored outside the repository or use Play App Signing.
 
-## فناوری‌ها
+No client-side Android protection can make an APK mathematically impossible to modify; these controls are intended to substantially raise the cost of binary patching and simple edit/re-sign workflows.
 
-- Kotlin
-- Jetpack Compose + Material 3
-- Native Android App Widgets / RemoteViews
-- Canvas bitmap rendering برای سازگاری بهتر با MIUI
-- WorkManager
-- C++/JNI برای سخت‌تر کردن دستکاری بخش هویت تبلیغاتی
-- R8 + resource shrinking برای build سخت‌شده
-- minSdk 26 / targetSdk 36
+## Build
+CI uses JDK 17, Android SDK 36, NDK 27.2.12479018, CMake 3.22.1 and Gradle 9.1.0.
 
-## ساخت
+The CI workflow runs unit tests, Android Lint and `assembleHardened`, then uploads `chand-hardened-apk`.
 
-برای توسعه:
-
-```bash
-gradle :app:testDebugUnitTest :app:assembleDebug
-```
-
-برای build سخت‌شده و قابل نصب در محیط CI:
-
-```bash
-gradle :app:assembleHardened
-```
-
-GitHub Actions تست، lint و build سخت‌شده را اجرا می‌کند و artifact با نام `chand-hardened-apk` تولید می‌شود.
-
-> برای انتشار عمومی واقعی، APK/AAB باید با یک کلید خصوصی و ثابت release امضا شود که فقط در GitHub Secrets یا Play App Signing نگه‌داری می‌شود. کلید خصوصی نباید داخل این repository قرار گیرد.
-
-## حقوق استفاده
-
-این پروژه تحت مجوز اختصاصی موجود در فایل `LICENSE` است. عمومی بودن repository به معنی اجازه کپی، بازنشر، تغییر نام یا rebrand کردن برنامه نیست.
+## License
+See `LICENSE`. Redistribution, rebranding and derivative distribution are restricted by the project license.
