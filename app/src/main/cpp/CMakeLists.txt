@@ -11,10 +11,14 @@ target_compile_options(cndx PRIVATE
     -fvisibility-inlines-hidden
     -ffunction-sections
     -fdata-sections
+    -fstack-protector-strong
+    -D_FORTIFY_SOURCE=2
     -fno-exceptions
     -fno-rtti
 )
 target_link_options(cndx PRIVATE
     -Wl,--gc-sections
     -Wl,--exclude-libs,ALL
+    -Wl,-z,relro
+    -Wl,-z,now
 )
