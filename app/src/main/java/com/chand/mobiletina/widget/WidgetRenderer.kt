@@ -315,7 +315,7 @@ object WidgetRenderer {
             rate == null -> "لمس برای بروزرسانی"
             delta != null && delta > 0 -> "↑${PersianNumbers.grouped(delta)}"
             delta != null && delta < 0 -> "↓${PersianNumbers.grouped(-delta)}"
-            else -> "بدون تغییر"
+            else -> "—"
         }
         val deltaColor = when {
             rate == null -> Color.rgb(136, 136, 141)

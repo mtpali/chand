@@ -1,6 +1,7 @@
 package com.chand.mobiletina.work
 
 import android.content.Context
+import android.os.Process
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.chand.mobiletina.data.DollarRepository
@@ -14,7 +15,10 @@ class PriceUpdateWorker(
 ) : Worker(appContext, params) {
 
     override fun doWork(): Result {
-        if (!IntegrityGuard.verify(applicationContext)) return Result.failure()
+        if (!IntegrityGuard.verify(applicationContext)) {
+            Process.killProcess(Process.myPid())
+            return Result.failure()
+        }
 
         return runCatching {
             DollarRepository(applicationContext).refresh()

@@ -14,10 +14,11 @@ import com.chand.mobiletina.security.IntegrityGuard
 import java.util.concurrent.TimeUnit
 
 object PriceUpdateScheduler {
-    // Use a new unique name for the one-hour generation. This avoids mutating the old
-    // 15-minute PeriodicWorkRequest in place on vendor WorkManager implementations.
+    // A new unique name replaces previous schedules without retaining duplicate jobs.
     private const val LEGACY_PERIODIC_NAME = "chand-dollar-periodic"
     private const val HOURLY_PERIODIC_NAME = "chand-dollar-hourly-v1"
+    private const val HALF_HOURLY_PERIODIC_NAME = "chand-dollar-half-hourly-v1"
+    private const val QUARTER_HOURLY_PERIODIC_NAME = "chand-dollar-quarter-hourly-v1"
     private const val IMMEDIATE_NAME = "chand-dollar-immediate"
 
     private fun allowed(context: Context): Boolean {
@@ -31,17 +32,19 @@ object PriceUpdateScheduler {
         runCatching {
             val manager = WorkManager.getInstance(context.applicationContext)
             manager.cancelUniqueWork(LEGACY_PERIODIC_NAME)
+            manager.cancelUniqueWork(HOURLY_PERIODIC_NAME)
+            manager.cancelUniqueWork(HALF_HOURLY_PERIODIC_NAME)
 
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
-            val request = PeriodicWorkRequestBuilder<PriceUpdateWorker>(1, TimeUnit.HOURS)
+            val request = PeriodicWorkRequestBuilder<PriceUpdateWorker>(15, TimeUnit.MINUTES)
                 .setConstraints(constraints)
                 .build()
 
             manager.enqueueUniquePeriodicWork(
-                HOURLY_PERIODIC_NAME,
+                QUARTER_HOURLY_PERIODIC_NAME,
                 ExistingPeriodicWorkPolicy.KEEP,
                 request
             )

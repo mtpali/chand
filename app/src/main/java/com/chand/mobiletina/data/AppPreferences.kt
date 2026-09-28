@@ -34,16 +34,17 @@ class AppPreferences(context: Context) {
     ): DollarRate {
         require(priceToman > 0L)
         val old = cachedDollarRate()
-        val previous = old?.priceToman ?: priceToman
+        val rate = old?.withFetchedPrice(priceToman, nowMillis, source)
+            ?: DollarRate(priceToman, priceToman, nowMillis, source)
 
         prefs.edit()
-            .putLong(KEY_RATE_CURRENT, priceToman)
-            .putLong(KEY_RATE_PREVIOUS, previous)
+            .putLong(KEY_RATE_CURRENT, rate.priceToman)
+            .putLong(KEY_RATE_PREVIOUS, rate.previousToman)
             .putLong(KEY_RATE_UPDATED_AT, nowMillis)
             .putString(KEY_RATE_SOURCE, source)
             .apply()
 
-        return DollarRate(priceToman, previous, nowMillis, source)
+        return rate
     }
 
     companion object {

@@ -12,9 +12,8 @@ import java.security.MessageDigest
 /**
  * Runtime tamper guard for hardened builds.
  *
- * This is intentionally kept out of Application.onCreate() because some MIUI launchers start
- * the app process while rendering an AppWidgetProvider. The checks are instead distributed over
- * the activity, workers and widget receivers so normal widget process startup stays lightweight.
+ * Checked at process startup and again from widget and background entry points. No network
+ * operation or WorkManager initialization is performed by this guard.
  */
 object IntegrityGuard {
     @Volatile
@@ -68,14 +67,10 @@ object IntegrityGuard {
 
         val signature = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val info = packageInfo.signingInfo ?: return null
-            val signatures = if (info.hasMultipleSigners()) {
-                info.apkContentsSigners
-            } else {
-                info.signingCertificateHistory
-            }
-            signatures?.firstOrNull()
+            // Pin the actual APK signer; signingCertificateHistory may include old keys.
+            info.apkContentsSigners?.singleOrNull()
         } else {
-            packageInfo.signatures?.firstOrNull()
+            packageInfo.signatures?.singleOrNull()
         } ?: return null
 
         return MessageDigest.getInstance("SHA-256")
