@@ -207,7 +207,7 @@ object WidgetRenderer {
         return min(available, target)
     }
 
-    private fun surface(widthDp: Int, heightDp: Int): Surface {
+    private fun surface(widthDp: Int, heightDp: Int, palette: WidgetPalette): Surface {
         val largestDp = max(widthDp, heightDp).toFloat()
         val scale = min(3f, MAX_BITMAP_SIDE_PX / largestDp).coerceAtLeast(1.25f)
         val widthPx = (widthDp * scale).roundToInt().coerceAtLeast(1)
@@ -225,7 +225,7 @@ object WidgetRenderer {
         val card = RectF(left, top, left + side, top + side)
 
         val cardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
+            color = palette.card
             style = Paint.Style.FILL
             isDither = true
         }
@@ -269,21 +269,22 @@ object WidgetRenderer {
     }
 
     private fun renderDate(context: Context, date: JalaliDate, widthDp: Int, heightDp: Int): Bitmap {
-        val s = surface(widthDp, heightDp)
+        val palette = WidgetPalettes.forContext(context)
+        val s = surface(widthDp, heightDp, palette)
         val centerX = s.card.centerX()
         val regular = regularTypeface(context)
         val bold = boldTypeface(context)
 
-        val weekday = textPaint(Color.rgb(5, 5, 5), s.side * 0.106f, regular, Paint.Align.CENTER)
+        val weekday = textPaint(palette.heading, s.side * 0.106f, regular, Paint.Align.CENTER)
         drawCenteredText(s.canvas, date.dayOfWeek, centerX, s.card.top + s.side * 0.252f, weekday)
 
         val number = PersianNumbers.digits(date.day)
-        val numberPaint = textPaint(Color.BLACK, s.side * 0.322f, bold, Paint.Align.CENTER)
+        val numberPaint = textPaint(palette.value, s.side * 0.322f, bold, Paint.Align.CENTER)
         fitText(numberPaint, number, s.side * 0.64f, s.side * 0.24f)
         drawCenteredText(s.canvas, number, centerX, s.card.top + s.side * 0.505f, numberPaint)
 
         val fullDate = "${date.monthName} ${PersianNumbers.digits(date.year)}"
-        val fullDatePaint = textPaint(Color.rgb(5, 5, 5), s.side * 0.106f, regular, Paint.Align.CENTER)
+        val fullDatePaint = textPaint(palette.heading, s.side * 0.106f, regular, Paint.Align.CENTER)
         fitText(fullDatePaint, fullDate, s.side * 0.84f, s.side * 0.078f)
         drawCenteredText(s.canvas, fullDate, centerX, s.card.top + s.side * 0.792f, fullDatePaint)
 
@@ -291,7 +292,8 @@ object WidgetRenderer {
     }
 
     private fun renderDollar(context: Context, rate: DollarRate?, widthDp: Int, heightDp: Int): Bitmap {
-        val s = surface(widthDp, heightDp)
+        val palette = WidgetPalettes.forContext(context)
+        val s = surface(widthDp, heightDp, palette)
         val regular = regularTypeface(context)
         val bold = boldTypeface(context)
         val left = s.card.left + s.side * 0.103f
@@ -299,11 +301,11 @@ object WidgetRenderer {
 
         drawFlag(context, s.canvas, s.card.left + s.side * 0.103f, s.card.top + s.side * 0.103f, s.side * 0.205f)
 
-        val title = textPaint(Color.rgb(5, 5, 5), s.side * 0.089f, regular, Paint.Align.RIGHT)
+        val title = textPaint(palette.heading, s.side * 0.089f, regular, Paint.Align.RIGHT)
         drawCenteredText(s.canvas, "دلار آمریکا", right, s.card.top + s.side * 0.162f, title)
 
         val code = textPaint(
-            Color.rgb(136, 136, 141),
+            palette.secondary,
             s.side * 0.068f,
             Typeface.create("sans-serif", Typeface.NORMAL),
             Paint.Align.RIGHT
@@ -315,13 +317,12 @@ object WidgetRenderer {
             rate == null -> "لمس برای بروزرسانی"
             delta != null && delta > 0 -> "↑${PersianNumbers.grouped(delta)}"
             delta != null && delta < 0 -> "↓${PersianNumbers.grouped(-delta)}"
-            else -> "—"
+            else -> ""
         }
         val deltaColor = when {
-            rate == null -> Color.rgb(136, 136, 141)
-            delta != null && delta > 0 -> Color.rgb(190, 69, 69)
-            delta != null && delta < 0 -> Color.rgb(75, 135, 103)
-            else -> Color.rgb(136, 136, 141)
+            delta != null && delta > 0 -> palette.rise
+            delta != null && delta < 0 -> palette.fall
+            else -> palette.secondary
         }
         val deltaPaint = textPaint(
             deltaColor,
@@ -329,13 +330,17 @@ object WidgetRenderer {
             regular,
             Paint.Align.LEFT
         )
-        fitText(deltaPaint, deltaText, s.side * 0.79f, s.side * 0.055f)
-        drawCenteredText(s.canvas, deltaText, left, s.card.top + s.side * 0.592f, deltaPaint)
+        if (deltaText.isNotEmpty()) {
+            fitText(deltaPaint, deltaText, s.side * 0.79f, s.side * 0.055f)
+            drawCenteredText(s.canvas, deltaText, left, s.card.top + s.side * 0.592f, deltaPaint)
+        }
 
-        val price = rate?.let { PersianNumbers.grouped(it.priceToman) } ?: "—"
-        val pricePaint = textPaint(Color.BLACK, s.side * 0.255f, bold, Paint.Align.LEFT)
-        fitText(pricePaint, price, s.side * 0.81f, s.side * 0.175f)
-        drawCenteredText(s.canvas, price, left, s.card.top + s.side * 0.790f, pricePaint)
+        if (rate != null) {
+            val price = PersianNumbers.grouped(rate.priceToman)
+            val pricePaint = textPaint(palette.value, s.side * 0.255f, bold, Paint.Align.LEFT)
+            fitText(pricePaint, price, s.side * 0.81f, s.side * 0.175f)
+            drawCenteredText(s.canvas, price, left, s.card.top + s.side * 0.790f, pricePaint)
+        }
 
         return s.bitmap
     }

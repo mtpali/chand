@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -27,6 +28,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,8 +48,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -53,15 +65,22 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chand.mobiletina.data.AppPreferences
+import com.chand.mobiletina.data.WidgetThemeMode
 import com.chand.mobiletina.date.JalaliDate
 import com.chand.mobiletina.promo.PromoSecrets
 import com.chand.mobiletina.util.PersianNumbers
 import com.chand.mobiletina.work.PriceUpdateScheduler
+import com.chand.mobiletina.widget.WidgetRenderer
+import com.chand.mobiletina.widget.combined.CombinedWidgetRenderer
+import kotlin.math.cos
+import kotlin.math.sin
 
 private val ChandFont = FontFamily(
     Font(R.font.vazirmatn_regular, FontWeight.Normal),
     Font(R.font.vazirmatn_bold, FontWeight.Bold)
 )
+
+private enum class SocialIconKind { INSTAGRAM, TELEGRAM }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,6 +115,7 @@ private fun ChandRoot() {
 private fun ChandScreen() {
     val context = LocalContext.current
     val prefs = remember { AppPreferences(context) }
+    var widgetTheme by remember { mutableStateOf(prefs.widgetTheme()) }
     var showInstagramPanel by remember { mutableStateOf(false) }
     val date = remember { JalaliDate.today() }
     val cachedRate = prefs.cachedDollarRate()
@@ -118,16 +138,20 @@ private fun ChandScreen() {
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                WidgetThemePicker(
+                    mode = widgetTheme,
+                    onSelect = { mode ->
+                        prefs.setWidgetTheme(mode)
+                        widgetTheme = mode
+                        WidgetRenderer.updateDateAll(context)
+                        WidgetRenderer.updateDollarAll(context)
+                        CombinedWidgetRenderer.updateAll(context)
+                    },
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
             }
 
-            // Keep only the first three useful information sections from the earlier screen.
-            Text(
-                "تاریخ شمسی و قیمت دلار، ساده و همیشه در دسترس.",
-                modifier = Modifier.padding(top = 6.dp, bottom = 16.dp),
-                fontFamily = ChandFont,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(Modifier.height(16.dp))
 
             PreviewCard(
                 title = "تاریخ شمسی",
@@ -155,7 +179,7 @@ private fun ChandScreen() {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PromoButton(
                     title = PromoSecrets.instagramTitle,
-                    symbol = "◎",
+                    icon = SocialIconKind.INSTAGRAM,
                     colors = listOf(
                         Color(0xFF6D28D9),
                         Color(0xFFD946EF),
@@ -166,7 +190,7 @@ private fun ChandScreen() {
 
                 PromoButton(
                     title = PromoSecrets.developerTitle,
-                    symbol = "➤",
+                    icon = SocialIconKind.TELEGRAM,
                     colors = listOf(
                         Color(0xFF0284C7),
                         Color(0xFF2563EB)
@@ -186,6 +210,137 @@ private fun ChandScreen() {
                     openInstagram(context, username)
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun WidgetThemePicker(
+    mode: WidgetThemeMode,
+    onSelect: (WidgetThemeMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val name = when (mode) {
+        WidgetThemeMode.LIGHT -> "روشن"
+        WidgetThemeMode.DARK -> "تاریک"
+        WidgetThemeMode.AUTO -> "خودکار"
+    }
+
+    Box(modifier) {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .semantics { contentDescription = "تم ویجت: $name؛ برای تغییر لمس کنید" }
+        ) {
+            ThemeIcon(mode)
+        }
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            listOf(
+                WidgetThemeMode.LIGHT to "روشن",
+                WidgetThemeMode.DARK to "تاریک",
+                WidgetThemeMode.AUTO to "خودکار (طبق گوشی)"
+            ).forEach { (option, title) ->
+                DropdownMenuItem(
+                    text = { Text(title, fontFamily = ChandFont) },
+                    onClick = {
+                        expanded = false
+                        onSelect(option)
+                    },
+                    trailingIcon = {
+                        if (mode == option) Text("✓", color = MaterialTheme.colorScheme.primary)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeIcon(mode: WidgetThemeMode) {
+    val color = MaterialTheme.colorScheme.onSurface
+    val background = MaterialTheme.colorScheme.surfaceVariant
+    Canvas(Modifier.size(21.dp)) {
+        val u = size.minDimension / 24f
+        val center = Offset(12f * u, 12f * u)
+        when (mode) {
+            WidgetThemeMode.LIGHT -> {
+                drawCircle(color, radius = 4f * u, center = center)
+                repeat(8) { index ->
+                    val angle = index * Math.PI / 4.0
+                    val x = cos(angle).toFloat()
+                    val y = sin(angle).toFloat()
+                    drawLine(
+                        color,
+                        Offset((12f + 7f * x) * u, (12f + 7f * y) * u),
+                        Offset((12f + 9.5f * x) * u, (12f + 9.5f * y) * u),
+                        strokeWidth = 1.8f * u,
+                        cap = StrokeCap.Round
+                    )
+                }
+            }
+            WidgetThemeMode.DARK -> {
+                drawCircle(color, radius = 9f * u, center = center)
+                drawCircle(background, radius = 7.5f * u, center = Offset(16f * u, 8f * u))
+            }
+            WidgetThemeMode.AUTO -> {
+                val bounds = Offset(3f * u, 3f * u)
+                val diameter = Size(18f * u, 18f * u)
+                drawArc(color, 90f, 180f, true, bounds, diameter)
+                drawCircle(color, radius = 9f * u, center = center, style = Stroke(1.8f * u))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SocialIcon(kind: SocialIconKind) {
+    Canvas(Modifier.size(26.dp)) {
+        val u = size.minDimension / 24f
+        when (kind) {
+            SocialIconKind.INSTAGRAM -> {
+                drawRoundRect(
+                    Color.White,
+                    topLeft = Offset(3f * u, 3f * u),
+                    size = Size(18f * u, 18f * u),
+                    cornerRadius = CornerRadius(5f * u),
+                    style = Stroke(width = 2.2f * u)
+                )
+                drawCircle(
+                    Color.White,
+                    radius = 4f * u,
+                    center = Offset(12f * u, 12f * u),
+                    style = Stroke(width = 2.2f * u)
+                )
+                drawCircle(Color.White, radius = 1.3f * u, center = Offset(17.4f * u, 6.8f * u))
+            }
+            SocialIconKind.TELEGRAM -> {
+                val plane = Path().apply {
+                    moveTo(2f * u, 10.8f * u)
+                    lineTo(21f * u, 3.2f * u)
+                    quadraticBezierTo(22.4f * u, 2.7f * u, 22f * u, 4.2f * u)
+                    lineTo(18.5f * u, 20.5f * u)
+                    quadraticBezierTo(18.3f * u, 21.2f * u, 17.6f * u, 20.8f * u)
+                    lineTo(12.6f * u, 17.1f * u)
+                    lineTo(10.1f * u, 19f * u)
+                    quadraticBezierTo(9.5f * u, 19.5f * u, 9.4f * u, 18.5f * u)
+                    lineTo(8.5f * u, 14.7f * u)
+                    lineTo(2.4f * u, 12.5f * u)
+                    quadraticBezierTo(1.2f * u, 12.1f * u, 2f * u, 10.8f * u)
+                    close()
+                }
+                drawPath(plane, Color.White)
+                drawLine(
+                    Color(0xFF1D4ED8),
+                    Offset(8.5f * u, 14.7f * u),
+                    Offset(19.7f * u, 5.2f * u),
+                    strokeWidth = 1.2f * u
+                )
+            }
         }
     }
 }
@@ -220,7 +375,7 @@ private fun PreviewCard(title: String, body: String) {
 @Composable
 private fun PromoButton(
     title: String,
-    symbol: String,
+    icon: SocialIconKind,
     colors: List<Color>,
     onClick: () -> Unit
 ) {
@@ -243,13 +398,7 @@ private fun PromoButton(
                     .background(Color.White.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    symbol,
-                    color = Color.White,
-                    fontFamily = ChandFont,
-                    fontSize = 23.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                SocialIcon(icon)
             }
 
             Spacer(Modifier.width(14.dp))
@@ -325,13 +474,7 @@ private fun InstagramAccountsOverlay(
                                     .background(Color.White.copy(alpha = 0.18f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    "◎",
-                                    color = Color.White,
-                                    fontFamily = ChandFont,
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                SocialIcon(SocialIconKind.INSTAGRAM)
                             }
 
                             Text(
@@ -408,13 +551,7 @@ private fun InstagramAccountCard(
                     .background(Brush.linearGradient(accent)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    "◎",
-                    color = Color.White,
-                    fontFamily = ChandFont,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                SocialIcon(SocialIconKind.INSTAGRAM)
             }
 
             Spacer(Modifier.width(13.dp))

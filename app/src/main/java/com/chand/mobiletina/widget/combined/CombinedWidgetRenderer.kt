@@ -23,6 +23,8 @@ import com.chand.mobiletina.data.AppPreferences
 import com.chand.mobiletina.data.DollarRate
 import com.chand.mobiletina.date.JalaliDate
 import com.chand.mobiletina.util.PersianNumbers
+import com.chand.mobiletina.widget.WidgetPalette
+import com.chand.mobiletina.widget.WidgetPalettes
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -148,6 +150,7 @@ object CombinedWidgetRenderer {
         widthDp: Int,
         heightDp: Int
     ): Bitmap {
+        val palette = WidgetPalettes.forContext(context)
         val largestDp = max(widthDp, heightDp).toFloat()
         val scale = min(3f, MAX_BITMAP_SIDE_PX / largestDp).coerceAtLeast(1.35f)
         val widthPx = (widthDp * scale).roundToInt().coerceAtLeast(1)
@@ -182,16 +185,16 @@ object CombinedWidgetRenderer {
             top + sidePx
         )
 
-        drawCardBackground(canvas, dateCard)
-        drawCardBackground(canvas, dollarCard)
-        drawDate(context, canvas, dateCard, date)
-        drawDollar(context, canvas, dollarCard, rate)
+        drawCardBackground(canvas, dateCard, palette)
+        drawCardBackground(canvas, dollarCard, palette)
+        drawDate(context, canvas, dateCard, date, palette)
+        drawDollar(context, canvas, dollarCard, rate, palette)
         return bitmap
     }
 
-    private fun drawCardBackground(canvas: Canvas, card: RectF) {
+    private fun drawCardBackground(canvas: Canvas, card: RectF, palette: WidgetPalette) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
+            color = palette.card
             style = Paint.Style.FILL
             isDither = true
         }
@@ -228,27 +231,27 @@ object CombinedWidgetRenderer {
         }
     }
 
-    private fun drawDate(context: Context, canvas: Canvas, card: RectF, date: JalaliDate) {
+    private fun drawDate(context: Context, canvas: Canvas, card: RectF, date: JalaliDate, palette: WidgetPalette) {
         val side = card.width()
         val centerX = card.centerX()
         val regular = regularTypeface(context)
         val bold = boldTypeface(context)
 
-        val weekday = textPaint(Color.rgb(5, 5, 5), side * 0.106f, regular, Paint.Align.CENTER)
+        val weekday = textPaint(palette.heading, side * 0.106f, regular, Paint.Align.CENTER)
         drawCenteredText(canvas, date.dayOfWeek, centerX, card.top + side * 0.252f, weekday)
 
         val number = PersianNumbers.digits(date.day)
-        val numberPaint = textPaint(Color.BLACK, side * 0.322f, bold, Paint.Align.CENTER)
+        val numberPaint = textPaint(palette.value, side * 0.322f, bold, Paint.Align.CENTER)
         fitText(numberPaint, number, side * 0.64f, side * 0.24f)
         drawCenteredText(canvas, number, centerX, card.top + side * 0.505f, numberPaint)
 
         val fullDate = "${date.monthName} ${PersianNumbers.digits(date.year)}"
-        val fullDatePaint = textPaint(Color.rgb(5, 5, 5), side * 0.106f, regular, Paint.Align.CENTER)
+        val fullDatePaint = textPaint(palette.heading, side * 0.106f, regular, Paint.Align.CENTER)
         fitText(fullDatePaint, fullDate, side * 0.84f, side * 0.078f)
         drawCenteredText(canvas, fullDate, centerX, card.top + side * 0.792f, fullDatePaint)
     }
 
-    private fun drawDollar(context: Context, canvas: Canvas, card: RectF, rate: DollarRate?) {
+    private fun drawDollar(context: Context, canvas: Canvas, card: RectF, rate: DollarRate?, palette: WidgetPalette) {
         val side = card.width()
         val regular = regularTypeface(context)
         val bold = boldTypeface(context)
@@ -257,11 +260,11 @@ object CombinedWidgetRenderer {
 
         drawFlag(context, canvas, card.left + side * 0.103f, card.top + side * 0.103f, side * 0.205f)
 
-        val title = textPaint(Color.rgb(5, 5, 5), side * 0.089f, regular, Paint.Align.RIGHT)
+        val title = textPaint(palette.heading, side * 0.089f, regular, Paint.Align.RIGHT)
         drawCenteredText(canvas, "دلار آمریکا", right, card.top + side * 0.162f, title)
 
         val code = textPaint(
-            Color.rgb(136, 136, 141),
+            palette.secondary,
             side * 0.068f,
             Typeface.create("sans-serif", Typeface.NORMAL),
             Paint.Align.RIGHT
@@ -273,13 +276,12 @@ object CombinedWidgetRenderer {
             rate == null -> "لمس برای بروزرسانی"
             delta != null && delta > 0 -> "↑${PersianNumbers.grouped(delta)}"
             delta != null && delta < 0 -> "↓${PersianNumbers.grouped(-delta)}"
-            else -> "—"
+            else -> ""
         }
         val deltaColor = when {
-            rate == null -> Color.rgb(136, 136, 141)
-            delta != null && delta > 0 -> Color.rgb(190, 69, 69)
-            delta != null && delta < 0 -> Color.rgb(75, 135, 103)
-            else -> Color.rgb(136, 136, 141)
+            delta != null && delta > 0 -> palette.rise
+            delta != null && delta < 0 -> palette.fall
+            else -> palette.secondary
         }
         val deltaPaint = textPaint(
             deltaColor,
@@ -287,13 +289,17 @@ object CombinedWidgetRenderer {
             regular,
             Paint.Align.LEFT
         )
-        fitText(deltaPaint, deltaText, side * 0.79f, side * 0.055f)
-        drawCenteredText(canvas, deltaText, left, card.top + side * 0.592f, deltaPaint)
+        if (deltaText.isNotEmpty()) {
+            fitText(deltaPaint, deltaText, side * 0.79f, side * 0.055f)
+            drawCenteredText(canvas, deltaText, left, card.top + side * 0.592f, deltaPaint)
+        }
 
-        val price = rate?.let { PersianNumbers.grouped(it.priceToman) } ?: "—"
-        val pricePaint = textPaint(Color.BLACK, side * 0.255f, bold, Paint.Align.LEFT)
-        fitText(pricePaint, price, side * 0.81f, side * 0.175f)
-        drawCenteredText(canvas, price, left, card.top + side * 0.790f, pricePaint)
+        if (rate != null) {
+            val price = PersianNumbers.grouped(rate.priceToman)
+            val pricePaint = textPaint(palette.value, side * 0.255f, bold, Paint.Align.LEFT)
+            fitText(pricePaint, price, side * 0.81f, side * 0.175f)
+            drawCenteredText(canvas, price, left, card.top + side * 0.790f, pricePaint)
+        }
     }
 
     private fun drawFlag(context: Context, canvas: Canvas, left: Float, top: Float, size: Float) {

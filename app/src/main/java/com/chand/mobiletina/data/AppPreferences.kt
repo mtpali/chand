@@ -2,14 +2,22 @@ package com.chand.mobiletina.data
 
 import android.content.Context
 
-enum class WidgetThemeMode { AUTO, LIGHT, DARK }
+enum class WidgetThemeMode {
+    AUTO, LIGHT, DARK;
+
+    fun isDark(systemDark: Boolean): Boolean = when (this) {
+        AUTO -> systemDark
+        LIGHT -> false
+        DARK -> true
+    }
+}
 
 class AppPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("chand_preferences", Context.MODE_PRIVATE)
 
     fun widgetTheme(): WidgetThemeMode = runCatching {
-        WidgetThemeMode.valueOf(prefs.getString(KEY_WIDGET_THEME, WidgetThemeMode.AUTO.name)!!)
-    }.getOrDefault(WidgetThemeMode.AUTO)
+        WidgetThemeMode.valueOf(prefs.getString(KEY_WIDGET_THEME, WidgetThemeMode.LIGHT.name)!!)
+    }.getOrDefault(WidgetThemeMode.LIGHT)
 
     fun setWidgetTheme(mode: WidgetThemeMode) {
         prefs.edit().putString(KEY_WIDGET_THEME, mode.name).apply()
