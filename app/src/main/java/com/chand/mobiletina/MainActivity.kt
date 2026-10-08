@@ -39,6 +39,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -118,7 +119,11 @@ private fun ChandScreen() {
     var widgetTheme by remember { mutableStateOf(prefs.widgetTheme()) }
     var showInstagramPanel by remember { mutableStateOf(false) }
     val date = remember { JalaliDate.today() }
-    val cachedRate = prefs.cachedDollarRate()
+    var cachedRate by remember(prefs) { mutableStateOf(prefs.cachedDollarRate()) }
+    DisposableEffect(prefs) {
+        val stopObserving = prefs.observeDollarRate { cachedRate = it }
+        onDispose { stopObserving() }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(

@@ -1,6 +1,7 @@
 package com.chand.mobiletina.data
 
 import android.content.Context
+import android.content.SharedPreferences
 
 enum class WidgetThemeMode {
     AUTO, LIGHT, DARK;
@@ -35,6 +36,16 @@ class AppPreferences(context: Context) {
         )
     }
 
+    fun observeDollarRate(onChanged: (DollarRate?) -> Unit): () -> Unit {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key in RATE_KEYS) onChanged(cachedDollarRate())
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        // Read after subscribing so a refresh during screen creation cannot be missed.
+        onChanged(cachedDollarRate())
+        return { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
     fun saveDollarRate(
         priceToman: Long,
         source: String,
@@ -61,5 +72,8 @@ class AppPreferences(context: Context) {
         private const val KEY_RATE_PREVIOUS = "rate_previous"
         private const val KEY_RATE_UPDATED_AT = "rate_updated_at"
         private const val KEY_RATE_SOURCE = "rate_source"
+        private val RATE_KEYS = setOf(
+            KEY_RATE_CURRENT, KEY_RATE_PREVIOUS, KEY_RATE_UPDATED_AT, KEY_RATE_SOURCE
+        )
     }
 }

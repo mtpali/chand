@@ -10,10 +10,13 @@
 
 ## جریان قیمت
 
-`PriceUpdateWorker -> DollarRepository -> AlanChandClient -> AppPreferences -> WidgetRenderer`
+`PriceUpdateWorker -> DollarRepository -> TgjuClient -> AppPreferences -> WidgetRenderer`
 
-- منبع فعلی صفحه عمومی AlanChand است.
+- منبع قیمت دلار آزاد صفحه عمومی `https://www.tgju.org/profile/price_dollar_rl` است؛ در صورت خطا جدول `https://www.tgju.org/currency` بررسی می‌شود.
+- `TgjuParser` فقط فیلد نرخ فعلی صفحه اختصاصی دلار یا ویژگی `data-price` ردیف `price_dollar_rl` را می‌خواند؛ نرخ ارزهای دیگر، بیشینه/کمینه، درصد تغییر و اعداد داخل tooltip پذیرفته نمی‌شوند.
+- قیمت منبع به ریال است و یک بار به تومان تبدیل می‌شود. هیچ توکن، نرخ رسمی یا قیمت تتر در این مسیر استفاده نمی‌شود.
 - آخرین قیمت موفق در SharedPreferences ذخیره می‌شود.
+- صفحه Compose با یک listener با طول عمر محدود به composition به تغییرات نرخ گوش می‌دهد و listener هنگام خروج از صفحه حذف می‌شود.
 - WorkManager هر ۱۵ دقیقه یک کار دوره‌ای با شرط اتصال به اینترنت ثبت می‌کند و در صورت دریافت موفق، ویجت را بلافاصله بازترسیم می‌کند.
 - درخواست به‌روزرسانی خودِ ویجت‌ها همچنان ساعتی است؛ دریافت قیمت و بازترسیم آن از طریق WorkManager انجام می‌شود.
 - لمس ویجت دلار یا ویجت ترکیبی و همچنین باز کردن برنامه، یک کار فوری expedited ایجاد می‌کند.
