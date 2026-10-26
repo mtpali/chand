@@ -7,7 +7,7 @@ An Android home-screen widget app for Persian date and USD/Toman display.
 - Android application ID: `com.chand.mobiletina`
 - Source namespace: `com.chand.mobiletina`
 - Main and test source trees are fully migrated to `com/chand/mobiletina`.
-- Version: `1.7.1` (`versionCode 29`)
+- Version: `1.7.2` (`versionCode 30`)
 - R8 minification/resource shrinking enabled for hardened/release builds.
 - Native JNI bridge uses dynamic registration and hidden symbols.
 - Hardened builds independently verify the current APK signing certificate in Kotlin and native
@@ -29,6 +29,7 @@ An Android home-screen widget app for Persian date and USD/Toman display.
 - TGJU rates are read only from the identified USD current-price field and converted from rial to toman once. Tether and other currencies are never substituted for USD.
 - WorkManager requests an update every 15 minutes and when the app opens or a dollar widget is tapped; Android controls the actual execution time.
 - The app screen observes saved quotes and refreshes without reopening the app. Failed requests retain the last successful quote and its existing timestamp.
+- Each successful quote is compared with the previous successful quote. An identical price shows **بدون تغییر** in the app, dollar widget and combined widget; rises and falls retain their arrows and amounts.
 - Network requests use bounded timeouts and response sizes. If all sources fail, the last successful quote and movement remain visible.
 - Public-source availability and schema/markup changes can require parser updates.
 - Source addresses are decoded at runtime and the catalog is protected against optimizer folding. This raises the cost of APK string editing; public endpoints are not authentication secrets.

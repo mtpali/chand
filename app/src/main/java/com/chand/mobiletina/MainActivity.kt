@@ -69,6 +69,7 @@ import com.chand.mobiletina.date.JalaliDate
 import com.chand.mobiletina.promo.PromoSecrets
 import com.chand.mobiletina.ui.ChandFonts
 import com.chand.mobiletina.ui.ChandTypography
+import com.chand.mobiletina.util.DollarChangeText
 import com.chand.mobiletina.util.PersianNumbers
 import com.chand.mobiletina.work.PriceUpdateScheduler
 import com.chand.mobiletina.widget.WidgetRenderer
@@ -167,7 +168,9 @@ private fun ChandScreen() {
 
             PreviewCard(
                 title = "دلار آمریکا",
-                body = cachedRate?.let { "${PersianNumbers.grouped(it.priceToman)} تومان" }
+                body = cachedRate?.let {
+                    "${PersianNumbers.grouped(it.priceToman)} تومان\n${DollarChangeText.forRate(it)}"
+                }
                     ?: "در حال دریافت آخرین قیمت..."
             )
 

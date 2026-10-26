@@ -23,6 +23,7 @@ import com.chand.mobiletina.data.AppPreferences
 import com.chand.mobiletina.data.DollarRate
 import com.chand.mobiletina.date.JalaliDate
 import com.chand.mobiletina.ui.ChandFonts
+import com.chand.mobiletina.util.DollarChangeText
 import com.chand.mobiletina.util.PersianNumbers
 import com.chand.mobiletina.widget.date.PersianDateWidgetReceiver
 import com.chand.mobiletina.widget.dollar.DollarWidgetReceiver
@@ -306,12 +307,7 @@ object WidgetRenderer {
         drawCenteredText(s.canvas, "USD", right, s.card.top + s.side * 0.244f, code)
 
         val delta = rate?.deltaToman
-        val deltaText = when {
-            rate == null -> "لمس برای بروزرسانی"
-            delta != null && delta > 0 -> "↑${PersianNumbers.grouped(delta)}"
-            delta != null && delta < 0 -> "↓${PersianNumbers.grouped(-delta)}"
-            else -> ""
-        }
+        val deltaText = rate?.let(DollarChangeText::forRate) ?: "لمس برای بروزرسانی"
         val deltaColor = when {
             delta != null && delta > 0 -> palette.rise
             delta != null && delta < 0 -> palette.fall
