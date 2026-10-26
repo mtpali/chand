@@ -7,7 +7,7 @@ An Android home-screen widget app for Persian date and USD/Toman display.
 - Android application ID: `com.chand.mobiletina`
 - Source namespace: `com.chand.mobiletina`
 - Main and test source trees are fully migrated to `com/chand/mobiletina`.
-- Version: `1.7.2` (`versionCode 30`)
+- Version: `1.0.0` (`versionCode 31`)
 - R8 minification/resource shrinking enabled for hardened/release builds.
 - Native JNI bridge uses dynamic registration and hidden symbols.
 - Hardened builds independently verify the current APK signing certificate in Kotlin and native

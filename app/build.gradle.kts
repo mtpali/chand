@@ -82,8 +82,8 @@ android {
         applicationId = "com.chand.mobiletina"
         minSdk = 26
         targetSdk = 36
-        versionCode = 30
-        versionName = "1.7.2"
+        versionCode = 31
+        versionName = "1.0.0"
 
         buildConfigField("boolean", "SECURE_RUNTIME", "false")
         buildConfigField("String", "CERT_LOCK_SHA256", "\"\"")

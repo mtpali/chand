@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 import time
 import zipfile
 import zlib
@@ -32,6 +33,32 @@ def certificate(apksigner, apk):
     if not match:
         raise RuntimeError("APK signer fingerprint was not found")
     return match.group(1).upper()
+
+
+def replace_dex_pin(data, original_pin, new_pin, d8):
+    original_bytes, new_bytes = original_pin.encode("ascii"), new_pin.encode("ascii")
+    count = data.count(original_bytes)
+    if not count:
+        return data, 0
+    patched = bytearray(data.replace(original_bytes, new_bytes))
+    patched[12:32] = hashlib.sha1(patched[32:]).digest()
+    patched[8:12] = zlib.adler32(patched[12:]).to_bytes(4, "little")
+    # DEX string_ids must stay sorted. A new random digest can change their order;
+    # D8 rewrites the string table and every index that refers to it.
+    with tempfile.TemporaryDirectory(prefix="chand-pin-rebuild-") as temporary:
+        folder = Path(temporary)
+        source = folder / "input.dex"
+        rebuilt = folder / "rebuilt"
+        rebuilt.mkdir()
+        source.write_bytes(patched)
+        run([d8, "--release", "--min-api", "26", "--output", rebuilt, source])
+        dex_files = list(rebuilt.glob("*.dex"))
+        if len(dex_files) != 1:
+            raise AssertionError("Expected one rebuilt DEX for the controlled pin patch")
+        data = dex_files[0].read_bytes()
+    if new_bytes not in data:
+        raise AssertionError("The rebuilt DEX lost the controlled certificate pin")
+    return data, count
 
 
 def launch():
@@ -66,7 +93,7 @@ def main():
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     tools = Path(os.environ.get("ANDROID_HOME", os.environ.get("ANDROID_SDK_ROOT", ""))) / "build-tools/36.0.0"
-    apksigner, zipalign = tools / "apksigner", tools / "zipalign"
+    apksigner, zipalign, d8 = tools / "apksigner", tools / "zipalign", tools / "d8"
     apk = args.apk.resolve()
     original_pin = certificate(apksigner, apk)
     adb("uninstall", PACKAGE, check=False)
@@ -96,12 +123,8 @@ def main():
                     continue
                 data = src.read(info)
                 if patch_dex_pin and info.filename.endswith(".dex"):
-                    count = data.count(original_pin.encode("ascii"))
-                    if count:
-                        replacements += count
-                        data = bytearray(data.replace(original_pin.encode("ascii"), new_pin.encode("ascii")))
-                        data[12:32] = hashlib.sha1(data[32:]).digest()
-                        data[8:12] = zlib.adler32(data[12:]).to_bytes(4, "little")
+                    data, count = replace_dex_pin(data, original_pin, new_pin, d8)
+                    replacements += count
                 dst.writestr(info, data)
             dst.writestr("assets/controlled-integrity-test.txt", b"Controlled CI tamper probe")
         if patch_dex_pin and replacements < 1:
