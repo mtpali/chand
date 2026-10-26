@@ -11,8 +11,8 @@ data class DollarRate(
     fun withFetchedPrice(newPriceToman: Long, fetchedAtMillis: Long, newSource: String): DollarRate =
         DollarRate(
             priceToman = newPriceToman,
-            // A repeated quote must not erase the last actual price movement.
-            previousToman = if (newPriceToman == priceToman) previousToman else priceToman,
+            // Compare each successful quote with the immediately preceding successful quote.
+            previousToman = priceToman,
             updatedAtMillis = fetchedAtMillis,
             source = newSource
         )

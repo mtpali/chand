@@ -1,6 +1,5 @@
 import java.io.File
 import java.io.FileInputStream
-import java.net.URI
 import java.security.KeyStore
 import java.security.MessageDigest
 
@@ -9,33 +8,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// Fonts are pinned to a specific upstream release and downloaded only at build time.
-// The installed APK is fully self-contained for typography.
-val widgetFontDir = layout.projectDirectory.dir("src/main/res/font")
-val downloadWidgetFonts by tasks.registering {
-    val regular = widgetFontDir.file("vazirmatn_regular.ttf")
-    val bold = widgetFontDir.file("vazirmatn_bold.ttf")
-    outputs.files(regular, bold)
-
-    doLast {
-        widgetFontDir.asFile.mkdirs()
-        val files = mapOf(
-            regular.asFile to "https://raw.githubusercontent.com/rastikerdar/vazirmatn/v33.003/fonts/ttf/Vazirmatn-Regular.ttf",
-            bold.asFile to "https://raw.githubusercontent.com/rastikerdar/vazirmatn/v33.003/fonts/ttf/Vazirmatn-Bold.ttf"
-        )
-        files.forEach { (target, source) ->
-            if (!target.exists() || target.length() < 100_000L) {
-                URI(source).toURL().openStream().use { input ->
-                    target.outputStream().use { output -> input.copyTo(output) }
-                }
-            }
-        }
-    }
-}
-
-tasks.matching { it.name == "preBuild" }.configureEach {
-    dependsOn(downloadWidgetFonts)
-}
+// The same OFL-licensed, pinned fonts are bundled for Compose and every widget.
+// Builds and installed typography no longer depend on a font download task.
 
 fun certificateSha256(store: File, password: String, alias: String): String {
     val keyStore = KeyStore.getInstance("PKCS12")
@@ -83,6 +57,22 @@ if (!hardenedStore.exists()) {
 }
 val hardenedCertSha256 = certificateSha256(hardenedStore, hardenedPassword, hardenedAlias)
 
+// A second signer pin is compiled into native code, independently of the DEX constant.
+val nativePinDirectory = layout.buildDirectory.dir("generated/integrity").get().asFile
+val maskedPin = hardenedCertSha256.chunked(2).mapIndexed { index, byte ->
+    byte.toInt(16) xor ((0xA7 + index * 13) and 0xff)
+}
+val nativePinHeader = """
+    #pragma once
+    #include <cstdint>
+    static constexpr std::uint8_t kMaskedSignerPin[] = {${maskedPin.joinToString(",")}};
+""".trimIndent() + "\n"
+nativePinDirectory.mkdirs()
+val nativePinFile = File(nativePinDirectory, "runtime_pin.h")
+if (!nativePinFile.exists() || nativePinFile.readText() != nativePinHeader) {
+    nativePinFile.writeText(nativePinHeader)
+}
+
 android {
     namespace = "com.chand.mobiletina"
     compileSdk = 36
@@ -92,14 +82,20 @@ android {
         applicationId = "com.chand.mobiletina"
         minSdk = 26
         targetSdk = 36
-        versionCode = 27
-        versionName = "1.6.6"
+        versionCode = 31
+        versionName = "1.0.0"
 
         buildConfigField("boolean", "SECURE_RUNTIME", "false")
         buildConfigField("String", "CERT_LOCK_SHA256", "\"\"")
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments += "-DCHAND_PIN_INCLUDE_DIR=${nativePinDirectory.absolutePath}"
+            }
         }
     }
 
@@ -172,4 +168,6 @@ dependencies {
     implementation("androidx.work:work-runtime:2.11.2")
 
     testImplementation("junit:junit:4.13.2")
+    // Android supplies org.json at runtime; JVM parser tests need its real implementation.
+    testImplementation("org.json:json:20250517")
 }

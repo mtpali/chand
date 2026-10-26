@@ -15,8 +15,8 @@ object TgjuParser {
             it.value.startsWith("<link", ignoreCase = true) &&
                 attribute(it.value, "rel").equals("canonical", ignoreCase = true) &&
                 attribute(it.value, "href")?.trimEnd('/') in setOf(
-                    "https://www.tgju.org/profile/price_dollar_rl",
-                    "https://tgju.org/profile/price_dollar_rl",
+                    TgjuClient.PUBLIC_USD_PAGE,
+                    TgjuClient.PUBLIC_USD_PAGE.replace("www.", ""),
                     "/profile/price_dollar_rl"
                 )
         }

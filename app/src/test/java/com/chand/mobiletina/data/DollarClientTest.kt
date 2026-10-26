@@ -1,0 +1,91 @@
+package com.chand.mobiletina.data
+
+import java.io.IOException
+import java.time.Instant
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
+import org.junit.Test
+
+class DollarClientTest {
+    private val now = Instant.parse("2026-10-26T20:00:00Z").toEpochMilli()
+    private val profile = """<link rel="canonical" href="${TgjuClient.PUBLIC_USD_PAGE}">
+        <span data-col="info.last_trade.PDrCotVal">2,668,050</span>"""
+
+    @Test
+    fun requestsPublicHanshaFirstAndNeverTouchesFallbackWhenValid() {
+        val requests = mutableListOf<String>()
+        val primary = HanshaClient({ url ->
+            requests += url
+            """[{"ab":"usd","ps":[{"sp":270500,"ts":"2026-10-26T19:30:00Z"}]}]"""
+        }, { now })
+        val fallback = TgjuClient { throw AssertionError("Fallback should not be requested") }
+        val secondary = UsdRateSource { throw AssertionError("AlanChand should not be requested") }
+        assertEquals(FetchedUsdRate(270_500L, "Hansha"), DollarClient(primary, secondary, fallback).fetchUsd())
+        assertEquals(listOf(HanshaClient.PUBLIC_RATES_URL), requests)
+    }
+
+    @Test
+    fun usesAlanChandAndNeverTgjuAfterHanshaNetworkFailure() {
+        val requests = mutableListOf<String>()
+        val primary = HanshaClient({ requests += it; throw IOException("HTTP 503") }, { now })
+        val secondary = AlanChandClient({ requests += it
+            """<tr><td class="currName">دلار آمریکا</td><td class="sellPrice">272,400</td></tr>"""
+        })
+        val fallback = UsdRateSource { throw AssertionError("TGJU must remain third") }
+        val rate = DollarClient(primary, secondary, fallback).fetchUsd()
+        assertEquals(listOf(HanshaClient.PUBLIC_RATES_URL, AlanChandClient.PUBLIC_HOME), requests)
+        assertEquals(FetchedUsdRate(272_400L, "AlanChand"), rate)
+    }
+
+    @Test
+    fun usesTgjuOnlyAfterHanshaAndBothAlanChandPagesFail() {
+        for (payload in listOf("bad JSON", "[]", """[{"ab":"usdt","ps":[]}]""")) {
+            val requests = mutableListOf<String>()
+            val primary = HanshaClient({ requests += it; payload }, { now })
+            val secondary = AlanChandClient({ requests += it; throw IOException("AlanChand unavailable") })
+            val fallback = TgjuClient { url ->
+                requests += url
+                if (url == TgjuClient.PUBLIC_USD_PAGE) "<h1>Unavailable</h1>"
+                else """<tr data-market-row="price_dollar_rl" data-price="2,662,000"></tr>"""
+            }
+            val rate = DollarClient(primary, secondary, fallback).fetchUsd()
+            assertEquals(listOf(HanshaClient.PUBLIC_RATES_URL, AlanChandClient.PUBLIC_HOME,
+                AlanChandClient.PUBLIC_USD_PAGE, TgjuClient.PUBLIC_USD_PAGE,
+                TgjuClient.PUBLIC_CURRENCY_PAGE), requests)
+            assertEquals(266_200L, rate.priceToman)
+        }
+    }
+
+    @Test
+    fun zeroPrimaryQuoteCannotReplaceCachedPrice() {
+        val rate = DollarClient(
+            UsdRateSource { FetchedUsdRate(0, "invalid") },
+            UsdRateSource { FetchedUsdRate(266_200, "AlanChand") },
+            UsdRateSource { throw AssertionError("Third source should not be requested") }
+        ).fetchUsd()
+        assertEquals(266_200L, rate.priceToman)
+    }
+
+    @Test
+    fun totalFailureIsAnErrorRatherThanAZeroQuote() {
+        val failure = assertThrows(IOException::class.java) {
+            DollarClient(
+                UsdRateSource { throw IOException("primary down") },
+                UsdRateSource { throw IOException("secondary down") },
+                UsdRateSource { throw IOException("fallback down") }
+            ).fetchUsd()
+        }
+        assertEquals(3, failure.suppressed.size)
+    }
+
+    @Test
+    fun invalidFallbackAlsoFailsInsteadOfSavingZero() {
+        assertThrows(IOException::class.java) {
+            DollarClient(
+                UsdRateSource { throw IOException("primary down") },
+                UsdRateSource { FetchedUsdRate(0, "invalid secondary") },
+                UsdRateSource { FetchedUsdRate(-1, "invalid") }
+            ).fetchUsd()
+        }
+    }
+}

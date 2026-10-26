@@ -22,6 +22,8 @@ import com.chand.mobiletina.R
 import com.chand.mobiletina.data.AppPreferences
 import com.chand.mobiletina.data.DollarRate
 import com.chand.mobiletina.date.JalaliDate
+import com.chand.mobiletina.ui.ChandFonts
+import com.chand.mobiletina.util.DollarChangeText
 import com.chand.mobiletina.util.PersianNumbers
 import com.chand.mobiletina.widget.date.PersianDateWidgetReceiver
 import com.chand.mobiletina.widget.dollar.DollarWidgetReceiver
@@ -235,14 +237,6 @@ object WidgetRenderer {
         return Surface(bitmap, canvas, scale, card, side)
     }
 
-    private fun regularTypeface(context: Context): Typeface =
-        runCatching { context.resources.getFont(R.font.vazirmatn_regular) }
-            .getOrElse { Typeface.create("sans-serif", Typeface.NORMAL) }
-
-    private fun boldTypeface(context: Context): Typeface =
-        runCatching { context.resources.getFont(R.font.vazirmatn_bold) }
-            .getOrElse { Typeface.create("sans-serif", Typeface.BOLD) }
-
     private fun textPaint(
         color: Int,
         sizePx: Float,
@@ -272,8 +266,8 @@ object WidgetRenderer {
         val palette = WidgetPalettes.forContext(context)
         val s = surface(widthDp, heightDp, palette)
         val centerX = s.card.centerX()
-        val regular = regularTypeface(context)
-        val bold = boldTypeface(context)
+        val regular = ChandFonts.regular(context)
+        val bold = ChandFonts.bold(context)
 
         val weekday = textPaint(palette.heading, s.side * 0.106f, regular, Paint.Align.CENTER)
         drawCenteredText(s.canvas, date.dayOfWeek, centerX, s.card.top + s.side * 0.252f, weekday)
@@ -294,8 +288,8 @@ object WidgetRenderer {
     private fun renderDollar(context: Context, rate: DollarRate?, widthDp: Int, heightDp: Int): Bitmap {
         val palette = WidgetPalettes.forContext(context)
         val s = surface(widthDp, heightDp, palette)
-        val regular = regularTypeface(context)
-        val bold = boldTypeface(context)
+        val regular = ChandFonts.regular(context)
+        val bold = ChandFonts.bold(context)
         val left = s.card.left + s.side * 0.103f
         val right = s.card.right - s.side * 0.103f
 
@@ -307,18 +301,13 @@ object WidgetRenderer {
         val code = textPaint(
             palette.secondary,
             s.side * 0.068f,
-            Typeface.create("sans-serif", Typeface.NORMAL),
+            regular,
             Paint.Align.RIGHT
         )
         drawCenteredText(s.canvas, "USD", right, s.card.top + s.side * 0.244f, code)
 
         val delta = rate?.deltaToman
-        val deltaText = when {
-            rate == null -> "لمس برای بروزرسانی"
-            delta != null && delta > 0 -> "↑${PersianNumbers.grouped(delta)}"
-            delta != null && delta < 0 -> "↓${PersianNumbers.grouped(-delta)}"
-            else -> ""
-        }
+        val deltaText = rate?.let(DollarChangeText::forRate) ?: "لمس برای بروزرسانی"
         val deltaColor = when {
             delta != null && delta > 0 -> palette.rise
             delta != null && delta < 0 -> palette.fall

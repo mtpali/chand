@@ -59,8 +59,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -69,6 +67,9 @@ import com.chand.mobiletina.data.AppPreferences
 import com.chand.mobiletina.data.WidgetThemeMode
 import com.chand.mobiletina.date.JalaliDate
 import com.chand.mobiletina.promo.PromoSecrets
+import com.chand.mobiletina.ui.ChandFonts
+import com.chand.mobiletina.ui.ChandTypography
+import com.chand.mobiletina.util.DollarChangeText
 import com.chand.mobiletina.util.PersianNumbers
 import com.chand.mobiletina.work.PriceUpdateScheduler
 import com.chand.mobiletina.widget.WidgetRenderer
@@ -76,10 +77,7 @@ import com.chand.mobiletina.widget.combined.CombinedWidgetRenderer
 import kotlin.math.cos
 import kotlin.math.sin
 
-private val ChandFont = FontFamily(
-    Font(R.font.vazirmatn_regular, FontWeight.Normal),
-    Font(R.font.vazirmatn_bold, FontWeight.Bold)
-)
+private val ChandFont = ChandFonts.family
 
 private enum class SocialIconKind { INSTAGRAM, TELEGRAM }
 
@@ -103,7 +101,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun ChandRoot() {
     val dark = isSystemInDarkTheme()
-    MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
+    MaterialTheme(
+        colorScheme = if (dark) darkColorScheme() else lightColorScheme(),
+        typography = ChandTypography
+    ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             Surface(modifier = Modifier.fillMaxSize()) {
                 ChandScreen()
@@ -167,7 +168,9 @@ private fun ChandScreen() {
 
             PreviewCard(
                 title = "دلار آمریکا",
-                body = cachedRate?.let { "${PersianNumbers.grouped(it.priceToman)} تومان" }
+                body = cachedRate?.let {
+                    "${PersianNumbers.grouped(it.priceToman)} تومان\n${DollarChangeText.forRate(it)}"
+                }
                     ?: "در حال دریافت آخرین قیمت..."
             )
 
