@@ -7,11 +7,12 @@ An Android home-screen widget app for Persian date and USD/Toman display.
 - Android application ID: `com.chand.mobiletina`
 - Source namespace: `com.chand.mobiletina`
 - Main and test source trees are fully migrated to `com/chand/mobiletina`.
-- Version: `1.7.0` (`versionCode 28`)
+- Version: `1.7.1` (`versionCode 29`)
 - R8 minification/resource shrinking enabled for hardened/release builds.
 - Native JNI bridge uses dynamic registration and hidden symbols.
-- Hardened builds verify the current APK signing certificate at process startup and widget/worker
-  entry points, and apply native anti-debug/hook checks. A modified APK re-signed with another
+- Hardened builds independently verify the current APK signing certificate in Kotlin and native
+  code at process startup and widget/worker entry points, and apply native anti-debug/hook checks.
+  The native pin is generated from the build's actual signer. A modified APK re-signed with another
   certificate fails closed on launch; this does not prevent a determined attacker from patching
   client-side checks or rebuilding public source.
 - Combined widget uses host-aware sizing and `fitCenter` rendering for Samsung One UI while retaining the MIUI resize path.
@@ -22,12 +23,15 @@ An Android home-screen widget app for Persian date and USD/Toman display.
 
 - The first source is the public JSON endpoint `https://hansha.online/l2`, matching the supplied reference app.
 - Only the exact `usd` row's most recent timestamped sale price (`sp`) is accepted. Hansha prices are already in toman.
-- Invalid, missing, stale (over 72 hours) or failed primary quotes fall back to the existing TGJU dollar profile, then TGJU's currency table.
+- Invalid, missing, stale (over 72 hours) or failed Hansha quotes fall back to AlanChand's homepage USD sale cell, then its dedicated USD page.
+- Only if AlanChand also fails, use TGJU's dollar profile, then TGJU's currency table: **Hansha → AlanChand → TGJU**.
+- AlanChand's visible homepage price is in toman; its dedicated Product/Offer JSON-LD explicitly declares IRR (converted once) or IRT (kept as toman).
 - TGJU rates are read only from the identified USD current-price field and converted from rial to toman once. Tether and other currencies are never substituted for USD.
 - WorkManager requests an update every 15 minutes and when the app opens or a dollar widget is tapped; Android controls the actual execution time.
 - The app screen observes saved quotes and refreshes without reopening the app. Failed requests retain the last successful quote and its existing timestamp.
 - Network requests use bounded timeouts and response sizes. If all sources fail, the last successful quote and movement remain visible.
 - Public-source availability and schema/markup changes can require parser updates.
+- Source addresses are decoded at runtime and the catalog is protected against optimizer folding. This raises the cost of APK string editing; public endpoints are not authentication secrets.
 
 ## Typography and launcher icon
 
@@ -41,6 +45,8 @@ An Android home-screen widget app for Persian date and USD/Toman display.
 ## CI
 
 GitHub Actions runs unit tests, lint and `assembleHardened` and publishes the hardened APK artifact.
+It also launches the original APK on an emulator and requires startup rejection after controlled
+re-signing, including a case where the Kotlin certificate pin is patched to trust the test signer.
 
 ## Release signing
 

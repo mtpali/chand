@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "signer_pin.h"
 
 namespace {
 
@@ -31,7 +32,7 @@ static const uint8_t q12[] = {104,146,54,110,167,248,53,115,241,255,159,119,199,
 static const uint8_t q13[] = {190};
 static const uint8_t q14[] = {230,212,197,175,126};
 static const uint8_t q15[] = {162};
-static const uint8_t q16[] = {91,73,32};
+static const uint8_t q16[] = {91,230,223,144,169,218,40,254,29,196,13,184,248,77,164,97,18,156,59,47,57,84,72,97,136,212,203,127};
 static const uint8_t q17[] = {202,183,27,130,76};
 static const uint8_t q18[] = {46,5,187,154,138,1};
 static const uint8_t q19[] = {89,218,192,39,133,184,157};
@@ -177,11 +178,94 @@ jbyteArray nv(JNIEnv* env, jobject, jint slot) {
     return out;
 }
 
-jint ng(JNIEnv*, jobject) {
+bool signerFailure(JNIEnv* env) {
+    if (env->ExceptionCheck()) env->ExceptionClear();
+    return false;
+}
+
+// Read PackageManager from native code instead of accepting a digest supplied by Kotlin.
+bool nativeSignerMatches(JNIEnv* env, jobject context) {
+    if (context == nullptr) return false;
+    jclass contextClass = env->FindClass("android/content/Context");
+    if (contextClass == nullptr) return signerFailure(env);
+    jmethodID getName = env->GetMethodID(contextClass, "getPackageName", "()Ljava/lang/String;");
+    if (getName == nullptr) return signerFailure(env);
+    auto packageName = static_cast<jstring>(env->CallObjectMethod(context, getName));
+    if (packageName == nullptr || env->ExceptionCheck()) return signerFailure(env);
+    const char* name = env->GetStringUTFChars(packageName, nullptr);
+    if (name == nullptr) return signerFailure(env);
+    const bool packageMatches = s(11) == name;
+    env->ReleaseStringUTFChars(packageName, name);
+    if (!packageMatches) return false;
+
+    jmethodID getManager = env->GetMethodID(contextClass, "getPackageManager", "()Landroid/content/pm/PackageManager;");
+    if (getManager == nullptr) return signerFailure(env);
+    jobject manager = env->CallObjectMethod(context, getManager);
+    if (manager == nullptr || env->ExceptionCheck()) return signerFailure(env);
+    jclass versionClass = env->FindClass("android/os/Build$VERSION");
+    if (versionClass == nullptr) return signerFailure(env);
+    jfieldID sdkField = env->GetStaticFieldID(versionClass, "SDK_INT", "I");
+    if (sdkField == nullptr) return signerFailure(env);
+    const jint sdk = env->GetStaticIntField(versionClass, sdkField);
+    jclass managerClass = env->FindClass("android/content/pm/PackageManager");
+    if (managerClass == nullptr) return signerFailure(env);
+    jmethodID getInfo = env->GetMethodID(managerClass, "getPackageInfo", "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;");
+    if (getInfo == nullptr) return signerFailure(env);
+    jobject info = env->CallObjectMethod(manager, getInfo, packageName, sdk >= 28 ? 0x08000000 : 0x40);
+    if (info == nullptr || env->ExceptionCheck()) return signerFailure(env);
+    jclass infoClass = env->FindClass("android/content/pm/PackageInfo");
+    if (infoClass == nullptr) return signerFailure(env);
+    jobjectArray signers = nullptr;
+    if (sdk >= 28) {
+        jfieldID signingField = env->GetFieldID(infoClass, "signingInfo", "Landroid/content/pm/SigningInfo;");
+        if (signingField == nullptr) return signerFailure(env);
+        jobject signing = env->GetObjectField(info, signingField);
+        if (signing == nullptr || env->ExceptionCheck()) return signerFailure(env);
+        jclass signingClass = env->FindClass("android/content/pm/SigningInfo");
+        if (signingClass == nullptr) return signerFailure(env);
+        jmethodID current = env->GetMethodID(signingClass, "getApkContentsSigners", "()[Landroid/content/pm/Signature;");
+        if (current == nullptr) return signerFailure(env);
+        signers = static_cast<jobjectArray>(env->CallObjectMethod(signing, current));
+    } else {
+        jfieldID signatures = env->GetFieldID(infoClass, "signatures", "[Landroid/content/pm/Signature;");
+        if (signatures == nullptr) return signerFailure(env);
+        signers = static_cast<jobjectArray>(env->GetObjectField(info, signatures));
+    }
+    if (signers == nullptr || env->ExceptionCheck()) return signerFailure(env);
+    if (env->GetArrayLength(signers) != 1) return false;
+    jobject signer = env->GetObjectArrayElement(signers, 0);
+    if (signer == nullptr || env->ExceptionCheck()) return signerFailure(env);
+    jclass signatureClass = env->FindClass("android/content/pm/Signature");
+    if (signatureClass == nullptr) return signerFailure(env);
+    jmethodID toBytes = env->GetMethodID(signatureClass, "toByteArray", "()[B");
+    if (toBytes == nullptr) return signerFailure(env);
+    jobject encoded = env->CallObjectMethod(signer, toBytes);
+    if (encoded == nullptr || env->ExceptionCheck()) return signerFailure(env);
+    jclass digestClass = env->FindClass("java/security/MessageDigest");
+    if (digestClass == nullptr) return signerFailure(env);
+    jmethodID getDigest = env->GetStaticMethodID(digestClass, "getInstance", "(Ljava/lang/String;)Ljava/security/MessageDigest;");
+    if (getDigest == nullptr) return signerFailure(env);
+    jstring algorithm = env->NewStringUTF("SHA-256");
+    if (algorithm == nullptr) return signerFailure(env);
+    jobject digester = env->CallStaticObjectMethod(digestClass, getDigest, algorithm);
+    if (digester == nullptr || env->ExceptionCheck()) return signerFailure(env);
+    jmethodID digestBytes = env->GetMethodID(digestClass, "digest", "([B)[B");
+    if (digestBytes == nullptr) return signerFailure(env);
+    auto digest = static_cast<jbyteArray>(env->CallObjectMethod(digester, digestBytes, encoded));
+    if (digest == nullptr || env->ExceptionCheck()) return signerFailure(env);
+    if (env->GetArrayLength(digest) != 32) return false;
+    std::uint8_t actual[32]{};
+    env->GetByteArrayRegion(digest, 0, 32, reinterpret_cast<jbyte*>(actual));
+    if (env->ExceptionCheck()) return signerFailure(env);
+    return signerPinMatches(actual, sizeof(actual));
+}
+
+jint ng(JNIEnv* env, jobject, jobject context) {
     jint flags = 0;
     if (!ok()) flags |= 1;
     if (traced()) flags |= 2;
     if (hooked()) flags |= 4;
+    if (!nativeSignerMatches(env, context)) flags |= 8;
     return flags;
 }
 

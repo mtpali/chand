@@ -61,3 +61,48 @@ jobs:
             app/build/reports/tests/testDebugUnitTest/
             app/build/reports/lint-results-hardened.*
           if-no-files-found: ignore
+
+  integrity-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download hardened APK
+        uses: actions/download-artifact@v4
+        with:
+          name: chand-hardened-apk
+          path: apk
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Install signing tools
+        run: sdkmanager "build-tools;36.0.0"
+      - name: Enable emulator KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Original and tampered APK startup checks
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: python3 scripts/emulator_integrity_smoke.py --apk apk/app-hardened.apk --output smoke-results
+      - name: Upload integrity smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chand-integrity-smoke-logs
+          path: smoke-results/*.log
+          if-no-files-found: ignore

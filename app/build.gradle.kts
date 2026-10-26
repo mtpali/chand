@@ -57,6 +57,22 @@ if (!hardenedStore.exists()) {
 }
 val hardenedCertSha256 = certificateSha256(hardenedStore, hardenedPassword, hardenedAlias)
 
+// A second signer pin is compiled into native code, independently of the DEX constant.
+val nativePinDirectory = layout.buildDirectory.dir("generated/integrity").get().asFile
+val maskedPin = hardenedCertSha256.chunked(2).mapIndexed { index, byte ->
+    byte.toInt(16) xor ((0xA7 + index * 13) and 0xff)
+}
+val nativePinHeader = """
+    #pragma once
+    #include <cstdint>
+    static constexpr std::uint8_t kMaskedSignerPin[] = {${maskedPin.joinToString(",")}};
+""".trimIndent() + "\n"
+nativePinDirectory.mkdirs()
+val nativePinFile = File(nativePinDirectory, "runtime_pin.h")
+if (!nativePinFile.exists() || nativePinFile.readText() != nativePinHeader) {
+    nativePinFile.writeText(nativePinHeader)
+}
+
 android {
     namespace = "com.chand.mobiletina"
     compileSdk = 36
@@ -66,14 +82,20 @@ android {
         applicationId = "com.chand.mobiletina"
         minSdk = 26
         targetSdk = 36
-        versionCode = 28
-        versionName = "1.7.0"
+        versionCode = 29
+        versionName = "1.7.1"
 
         buildConfigField("boolean", "SECURE_RUNTIME", "false")
         buildConfigField("String", "CERT_LOCK_SHA256", "\"\"")
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments += "-DCHAND_PIN_INCLUDE_DIR=${nativePinDirectory.absolutePath}"
+            }
         }
     }
 

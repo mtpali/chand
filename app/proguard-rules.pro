@@ -15,5 +15,8 @@
 -adaptclassstrings
 -renamesourcefileattribute SourceFile
 
+# Keep decoding at runtime while still renaming the catalog and its members.
+-keep,allowobfuscation class com.chand.mobiletina.data.SourceEndpoints { *; }
+
 # Keep metadata required by Kotlin/Compose/WorkManager while still allowing class renaming.
 -keepattributes RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations,AnnotationDefault,Signature,InnerClasses,EnclosingMethod

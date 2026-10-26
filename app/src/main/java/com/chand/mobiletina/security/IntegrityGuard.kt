@@ -27,8 +27,8 @@ object IntegrityGuard {
         if (Debug.isDebuggerConnected() || Debug.waitingForDebugger()) return false
         if (!certificateMatches(context.applicationContext)) return false
 
-        // Native side independently checks the process identity, TracerPid and common hook maps.
-        return Q.h()
+        // Native code independently reads the installed signer, then checks process/hook state.
+        return Q.h(context.applicationContext)
     }
 
     private fun certificateMatches(context: Context): Boolean {

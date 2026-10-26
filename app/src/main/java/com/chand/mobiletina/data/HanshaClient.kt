@@ -13,6 +13,6 @@ class HanshaClient(
     }
 
     companion object {
-        const val PUBLIC_RATES_URL = "https://hansha.online/l2"
+        val PUBLIC_RATES_URL: String get() = SourceEndpoints.hanshaRates
     }
 }

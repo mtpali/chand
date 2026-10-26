@@ -4,6 +4,11 @@ project(cndx LANGUAGES CXX)
 
 add_library(cndx SHARED promo_guard.cpp)
 
+if(NOT DEFINED CHAND_PIN_INCLUDE_DIR)
+    message(FATAL_ERROR "Native signer pin directory is required")
+endif()
+target_include_directories(cndx PRIVATE "${CHAND_PIN_INCLUDE_DIR}")
+
 target_compile_features(cndx PRIVATE cxx_std_17)
 target_compile_options(cndx PRIVATE
     -O3

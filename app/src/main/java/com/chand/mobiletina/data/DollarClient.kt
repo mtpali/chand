@@ -8,14 +8,15 @@ fun interface UsdRateSource {
     fun fetchUsd(): FetchedUsdRate
 }
 
-/** A valid Hansha USD quote always wins; existing TGJU routes remain the fallback. */
+/** Fixed provider order: Hansha, AlanChand, then TGJU. Stop at the first valid USD quote. */
 class DollarClient(
     private val primary: UsdRateSource = HanshaClient(),
+    private val secondary: UsdRateSource = AlanChandClient(),
     private val fallback: UsdRateSource = TgjuClient()
 ) : UsdRateSource {
     override fun fetchUsd(): FetchedUsdRate {
         val failures = mutableListOf<Exception>()
-        for (source in listOf(primary, fallback)) {
+        for (source in listOf(primary, secondary, fallback)) {
             try {
                 val rate = source.fetchUsd()
                 if (rate.priceToman <= 0L) throw IOException("Invalid USD quote")

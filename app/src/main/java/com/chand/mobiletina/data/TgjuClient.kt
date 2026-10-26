@@ -25,7 +25,7 @@ class TgjuClient(private val request: (String) -> String = {
     }
 
     companion object {
-        const val PUBLIC_USD_PAGE = "https://www.tgju.org/profile/price_dollar_rl"
-        const val PUBLIC_CURRENCY_PAGE = "https://www.tgju.org/currency"
+        val PUBLIC_USD_PAGE: String get() = SourceEndpoints.tgjuUsd
+        val PUBLIC_CURRENCY_PAGE: String get() = SourceEndpoints.tgjuCurrencies
     }
 }
