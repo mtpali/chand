@@ -50,3 +50,14 @@ jobs:
           name: chand-hardened-apk
           path: app/build/outputs/apk/hardened/app-hardened.apk
           if-no-files-found: error
+
+      - name: Upload test and lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chand-validation-reports
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/reports/lint-results-hardened.*
+          if-no-files-found: ignore

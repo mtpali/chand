@@ -5,6 +5,16 @@ import org.junit.Test
 
 class DollarRateTest {
     @Test
+    fun unchangedQuoteKeepsMovementWhenSwitchingBetweenSources() {
+        val previous = DollarRate(270_500L, 270_800L, 1L, "Hansha")
+        val fallback = previous.withFetchedPrice(270_500L, 2L, "TGJU Web")
+        assertEquals(-300L, fallback.deltaToman)
+        assertEquals("TGJU Web", fallback.source)
+        val primary = fallback.withFetchedPrice(270_700L, 3L, "Hansha")
+        assertEquals(200L, primary.deltaToman)
+    }
+
+    @Test
     fun repeatedPriceKeepsLastNonzeroMovementUntilPriceChangesAgain() {
         val first = DollarRate(100_000L, 100_000L, 1L, "test")
         assertEquals(0L, first.deltaToman)
